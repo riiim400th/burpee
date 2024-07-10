@@ -10,7 +10,7 @@ import java.awt.datatransfer.Transferable
 import javax.swing.*
 
 val ignoreHeaderNames = mutableListOf<String>()
-val parseScope = mutableListOf("Headers", "Params", "Cookies")
+val parseScope = mutableListOf("Outline","Path","Headers", "Params", "Cookies")
 val valueDecode = mutableListOf<String>()
 class TabTask(private val api: MontoyaApi) : JPanel() {
     init {
@@ -124,10 +124,31 @@ class TabTask(private val api: MontoyaApi) : JPanel() {
     private fun addCheckBoxes() {
         val c = GridBagConstraints()
         c.insets = Insets(5, 10, 5, 10)
-
+        val outlineCheckBox = JCheckBox("Outline", true)
+        val pathCheckBox = JCheckBox("Path", true)
         val headerCheckBox = JCheckBox("Headers", true)
         val paramsCheckBox = JCheckBox("Params", true)
         val cookiesCheckBox = JCheckBox("Cookies", true)
+
+        outlineCheckBox.addActionListener {
+            if (outlineCheckBox.isSelected) {
+                parseScope.add("Outline")
+                api.logging().logToOutput("\r\nparseScope:\r\n${parseScope}")
+            } else {
+                parseScope.remove("Outline")
+                api.logging().logToOutput("\r\nparseScope:\r\n${parseScope}")
+            }
+        }
+
+        pathCheckBox.addActionListener {
+            if (pathCheckBox.isSelected) {
+                parseScope.add("Path")
+                api.logging().logToOutput("\r\nparseScope:\r\n${parseScope}")
+            } else {
+                parseScope.remove("Path")
+                api.logging().logToOutput("\r\nparseScope:\r\n${parseScope}")
+            }
+        }
 
         headerCheckBox.addActionListener {
             if (headerCheckBox.isSelected) {
@@ -135,16 +156,6 @@ class TabTask(private val api: MontoyaApi) : JPanel() {
                 api.logging().logToOutput("\r\nparseScope:\r\n${parseScope}")
             } else {
                 parseScope.remove("Headers")
-                api.logging().logToOutput("\r\nparseScope:\r\n${parseScope}")
-            }
-        }
-
-        paramsCheckBox.addActionListener {
-            if (paramsCheckBox.isSelected) {
-                parseScope.add("Params")
-                api.logging().logToOutput("\r\nparseScope:\r\n${parseScope}")
-            } else {
-                parseScope.remove("Params")
                 api.logging().logToOutput("\r\nparseScope:\r\n${parseScope}")
             }
         }
@@ -159,18 +170,38 @@ class TabTask(private val api: MontoyaApi) : JPanel() {
             }
         }
 
+        paramsCheckBox.addActionListener {
+            if (paramsCheckBox.isSelected) {
+                parseScope.add("Params")
+                api.logging().logToOutput("\r\nparseScope:\r\n${parseScope}")
+            } else {
+                parseScope.remove("Params")
+                api.logging().logToOutput("\r\nparseScope:\r\n${parseScope}")
+            }
+        }
+
+
         // 配置
+        c.fill = GridBagConstraints.HORIZONTAL
         c.gridx = 2
         c.gridy = 0
         this.add(JLabel("Parse Scope"), c)
         c.gridy = 1
-        this.add(headerCheckBox, c)
+        this.add(outlineCheckBox, c)
 
         c.gridy = 2
-        this.add(paramsCheckBox, c)
+        this.add(pathCheckBox, c)
 
         c.gridy = 3
+        this.add(headerCheckBox, c)
+
+        c.gridy = 4
         this.add(cookiesCheckBox, c)
+
+        c.gridy = 5
+        this.add(paramsCheckBox, c)
+
+
     }
 
     private fun addDecodeCheck() {
