@@ -1,14 +1,11 @@
 package burpee
 
 import burp.api.montoya.MontoyaApi
-import org.apache.poi.ss.formula.functions.Column
 import org.apache.poi.ss.usermodel.Cell
-import org.apache.poi.xssf.usermodel.XSSFSheet
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.nio.file.Paths
 
 class ExcelTask(private val api: MontoyaApi) {
 
@@ -26,6 +23,7 @@ class ExcelTask(private val api: MontoyaApi) {
         val column = listOf(listOf("No.","action","Referer URL","Dst URL","Dst URL(with parameters)","Method","Status Code","Parameter count"))
         this.insert(column)
         this.saveWorkbook()
+        requestID = currentRowNum
         api.logging().logToOutput("Data inserted to sheet($sheet):\t$column")
     }
 
@@ -37,7 +35,7 @@ class ExcelTask(private val api: MontoyaApi) {
 
     fun updateRequestID() {
         this.selectSheet("requests")
-        requestID = ++currentRowNum
+        requestID = currentRowNum
         api.logging().logToOutput("updateRequestID:\t$requestID")
     }
 

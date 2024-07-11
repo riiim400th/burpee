@@ -4,9 +4,6 @@ import burp.api.montoya.MontoyaApi
 import java.awt.*
 import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.Transferable
-import java.awt.event.ActionEvent
-import java.awt.event.ActionListener
-import java.io.FileOutputStream
 import javax.swing.*
 
 val ignoreHeaderNames = mutableListOf<String>()
@@ -15,6 +12,7 @@ val valueDecode = mutableListOf<String>()
 var outputFile = ""
 val comboBox = JComboBox(mode_options.values.toTypedArray())
 var requestID = 0
+var created = false
 class TabTask(private val api: MontoyaApi) : JPanel() {
 
     init {
@@ -104,24 +102,29 @@ class TabTask(private val api: MontoyaApi) : JPanel() {
                 // ファイルの存在確認
                 if (!selectedFile.exists()) {
                     try {
+                        created = true
                         if (!selectedFile.createNewFile()) {
+                            created = false
                             api.logging().logToOutput("Failed to create file:\t${selectedFile.absolutePath}")
                             return@addActionListener
                         }
                     } catch (e: Exception) {
+                        created = false
                         api.logging().logToOutput("Error creating file: ${e.message}")
                         return@addActionListener
                     }
+                } else {
+                    created = false
                 }
+
 
                 // ファイルが存在する場合の処理
                 api.logging().logToOutput("File ${if (selectedFile.exists()) "already exists" else "created"}:\t${selectedFile.absolutePath}")
                 outputFile = selectedFile.absolutePath
                 filePathLabel.text = selectedFile.name
 
-                if (!selectedFile.exists()) {
+                if (created) {
                     ExcelTask(api).insertRequestsSheetColumn()
-                    requestID = 0
                 } else {
                     ExcelTask(api).updateRequestID()
                 }
@@ -334,7 +337,7 @@ class TabTask(private val api: MontoyaApi) : JPanel() {
     }
 
     private fun alert(message:String){
-        JOptionPane.showMessageDialog(this, message, "burpee", JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(this, message, "burpee", JOptionPane.INFORMATION_MESSAGE)
     }
 
     private fun addSeparator(gridx: Int, gridy: Int) {
