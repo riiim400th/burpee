@@ -1,15 +1,13 @@
 # Burpee - Burp Suite Extension
 
 ## Overview
-Burpee is a Burp Suite extension that parses HTTP requests and copies them to the clipboard in TSVformat, making it easy to paste into Excel.
+Burpee is a Burp Suite extension that extracts parameters to Excel and the Clipboard.
 
-![image](https://github.com/riiim400th/burpee/assets/98566465/df51a22f-ff4d-4bd7-bdc5-599c1d0ff3ca)
-
+![head_image](https://github.com/user-attachments/assets/82dbe607-3847-4d04-b720-6867a33e10f8)
 
 ## Features
-- **Parse HTTP Requests:** Extracts Path, Headers, and Body.
-- **TSV Format:** Formats data in TSV, ideal for pasting into Excel.
-- **Clipboard Copy:** Copies formatted data to the clipboard with one click.
+- **Copy as TSV Format:** Formats HTTP data in TSV, ideal for pasting into Excel.
+- **Write to Excel:** Automatically generates sheets for request URLs and parameters.
 
 ## Installation
 1. **Download Jar:** Get the latest version from the [release page](https://github.com/riiim400th/burpee/releases).
@@ -18,18 +16,30 @@ Burpee is a Burp Suite extension that parses HTTP requests and copies them to th
    - Click "Add" and select the downloaded jar.
 
 ## Usage
-1. **Setting:** Configure from burpee tab.
+1. **Settings:** In the Burpee tab, configure outputs, scope (which part of the HTTP request to extract), ignore headers, etc.
 
-![スクリーンショット 2024-07-11 085628](https://github.com/riiim400th/burpee/assets/98566465/1c127dc0-345e-4163-818b-025875649d37)
+   ![image](https://github.com/user-attachments/assets/669295e3-0706-492d-be52-48dcbf1cd09b)
+
 
 2. **Parse and Copy:**
-   - Select and open menu the HTTP request.
-   - Click "Extensions > burpee > Copy".
-   - The data is now in your clipboard as TSV.
+   - Select an HTTP request and open the menu.
+   - Click "Extensions > Burpee".
+   - The data is now in the clipboard and saved to a file.
   
-![スクリーンショット 2024-07-11 090410](https://github.com/riiim400th/burpee/assets/98566465/9d17304a-d761-4fe4-a96a-345333a8e0be)
+   ![image](https://github.com/user-attachments/assets/047ec80c-9fc6-4114-a720-fd738af409d4)
 
 
-3. **Paste into Excel:** paste the copied data.
+3. **Paste into Excel:** Paste the copied data.
 
-![スクリーンショット 2024-07-11 085739](https://github.com/riiim400th/burpee/assets/98566465/fb611c1f-ccab-472a-9c75-a484f7067d28)
+   ![image](https://github.com/user-attachments/assets/ab6e9f0e-0033-4954-a9ce-0a591a7af003)
+
+
+4. **Check the file:** The file contains a summary of site visits, with lists of URLs and request details.
+
+   **Requests Summary Sheet**
+
+   ![image](https://github.com/user-attachments/assets/4cdec456-82e4-4797-ba10-cff76b472c1f)
+
+   **Requests Detail Sheet**
+
+   ![image](https://github.com/user-attachments/assets/c7f41d03-1355-4abe-ac90-1b31f1fef513)
