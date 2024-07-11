@@ -6,13 +6,14 @@ plugins {
 }
 
 group = "org.example"
-version = "1.1.1"
+version = "1.2.0"
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
+    implementation("org.apache.poi:poi-ooxml:5.2.3")
     implementation("net.portswigger.burp.extensions:montoya-api:2023.3")
 }
 

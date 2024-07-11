@@ -18,14 +18,14 @@ import javax.swing.JMenuItem
 class MenuTask(private val api: MontoyaApi) : ContextMenuItemsProvider {
     private fun provideOutlineStrings(request: HttpRequest, result: StringBuilder) {
         val method = request.method()
-        api.logging().logToOutput("method:\r\n${method}")
+        api.logging().logToOutput("method:\t${method}")
         var url = request.url()
         if ("URL" in valueDecode) {
             url = URLDecoder.decode(url, "UTF-8")
     }
-    api.logging().logToOutput("url:\r\n${url}")
+    api.logging().logToOutput("url:\t${url}")
         val httpVer = request.httpVersion()
-    api.logging().logToOutput("httpVer:\r\n${httpVer}")
+    api.logging().logToOutput("httpVer:\t${httpVer}")
 
             result
                 .append("Method\t")
@@ -46,7 +46,7 @@ class MenuTask(private val api: MontoyaApi) : ContextMenuItemsProvider {
 
     private fun providePathStrings(paths: List<String>, result: StringBuilder) {
         paths.forEachIndexed { i, path ->
-            api.logging().logToOutput("path${i + 1}:\r\n${path}")
+            api.logging().logToOutput("path${i + 1}:\t${path}")
             var p = path
             if ("URL" in valueDecode) {
                 p = URLDecoder.decode(path, "UTF-8")
@@ -62,7 +62,7 @@ class MenuTask(private val api: MontoyaApi) : ContextMenuItemsProvider {
     }
     private fun provideHeaderStrings(headers: List<HttpHeader>, result: StringBuilder) {
             headers.forEachIndexed { i, header ->
-                api.logging().logToOutput("header${i + 1}:\r\n${header}")
+                api.logging().logToOutput("header${i + 1}:\t${header}")
                 if (header.name() !in ignoreHeaderNames) {
                     var v = header.value().replace(Regex("[\\x00-\\x1F\\x7F]+"), "")
                     if ("URL" in valueDecode) {
@@ -76,13 +76,13 @@ class MenuTask(private val api: MontoyaApi) : ContextMenuItemsProvider {
                         .append(v)
                         .append("\r\n")
                 } else {
-                    api.logging().logToOutput("skip parse ${i + 1}:\r\n${header.name()} is in ignoreParamHeaderNames")
+                    api.logging().logToOutput("skip parse ${i + 1}:\t${header.name()} is in ignoreParamHeaderNames")
                 }
             }
     }
     private fun provideParamsStrings(params: List<HttpParameter>, result: StringBuilder) {
         params.forEachIndexed { i, param ->
-            api.logging().logToOutput("param${i + 1}:\r\n${param}")
+            api.logging().logToOutput("param${i + 1}:\t${param}")
 
             var v = param.value().replace(Regex("[\\x00-\\x1F\\x7F]+"), "")
             if ("URL" in valueDecode && !(param.type() == BODY && param.name() == "file")) {
@@ -97,20 +97,51 @@ class MenuTask(private val api: MontoyaApi) : ContextMenuItemsProvider {
                 .append("\r\n")
         }
     }
+    private fun provideSummaryRowStrings(request:  HttpRequest,result: StringBuilder,statusCode:String) {
+        var url = request.url()
+        var referer = request.headers().find { it.name() == "Referer" }?.value() ?: "?"
+        if ("URL" in valueDecode) {
+            url = URLDecoder.decode(url, "UTF-8")
+            referer = URLDecoder.decode(referer, "UTF-8")
+        }
+        val urlNoParam = url.substringBefore("?")
+
+        result
+            .append("${requestID.toString()}\t")
+            .append("\t")
+            .append("$referer\t")
+            .append("$urlNoParam\t")
+            .append("$url\t")
+            .append("${request.method()}\t")
+            .append("$statusCode\t")
+            .append(request.parameters().count { it.type() != COOKIE }.toString())
+            .append("\r\n")
+    }
+
+
+    private fun tsvToList(text: String): List<List<String>> {
+        val lines = text.trim().split("\r\n")
+        val data = lines.map { line ->
+            line.split("\t")
+        }
+        return data
+    }
 
     override fun provideMenuItems(event: ContextMenuEvent): List<Component>? {
         if (event.isFromTool(ToolType.PROXY,ToolType.REPEATER, ToolType.TARGET, ToolType.LOGGER)) {
             val menuItemList: MutableList<Component> = mutableListOf()
-            val retrieveRequestItem = JMenuItem("Copy")
+            val copyParse = JMenuItem("burpee")
             val requestResponse: HttpRequestResponse = if (event.messageEditorRequestResponse().isPresent) {
                 event.messageEditorRequestResponse().get().requestResponse()
             } else {
                 event.selectedRequestResponses()[0]
             }
 
-            retrieveRequestItem.addActionListener {
+            copyParse.addActionListener {
                 val result = StringBuilder()
                 val req = requestResponse.request()
+                val res = requestResponse.response()
+                val resStatusCode = res?.statusCode()?.toString() ?: ""
                 val paths = requestResponse.request().path()
                     .split("/")
                     .map { it.substringBefore("?") }
@@ -144,13 +175,40 @@ class MenuTask(private val api: MontoyaApi) : ContextMenuItemsProvider {
 
                 val text = result.toString()
 
-                val selection = StringSelection(text)
-                val clipboard = Toolkit.getDefaultToolkit().systemClipboard
-                clipboard.setContents(selection, selection)
-                api.logging().logToOutput("\r\ncopied:\r\n${text}")
+                if (mode == 0 || mode == 2) {
+                    val selection = StringSelection(text)
+                    val clipboard = Toolkit.getDefaultToolkit().systemClipboard
+                    clipboard.setContents(selection, selection)
+                    api.logging().logToOutput("\r\ncopied:\t${text}")
+                }
 
+                if (mode == 1 || mode ==2) {
+                    val excelTask = ExcelTask(api)
+                    api.logging().logToOutput("requestID is${requestID}")
+
+                    // insert summary detail
+                    val summary = StringBuilder()
+                    provideSummaryRowStrings(req,summary,resStatusCode)
+                    val summaryData = tsvToList(summary.toString())
+                    excelTask.selectSheet("requests")
+                    excelTask.insert(summaryData)
+                    api.logging().logToOutput("requestID${requestID}:\tsummaryData:${summaryData}")
+
+                    // insert request
+                    val detailData = tsvToList(text)
+                    excelTask.selectSheet("$requestID")
+                    excelTask.insert(detailData)
+                    api.logging().logToOutput("requestID${requestID}:\tdetailData:${detailData}")
+
+                    // save
+                    excelTask.saveWorkbook()
+                    api.logging().logToOutput("\r\nsaved to $outputFile")
+                    ++requestID
+
+                }
             }
-            menuItemList.add(retrieveRequestItem)
+
+            menuItemList.add(copyParse)
 
             return menuItemList
         }
