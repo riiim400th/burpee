@@ -131,80 +131,82 @@ class MenuTask(private val api: MontoyaApi) : ContextMenuItemsProvider {
         if (event.isFromTool(ToolType.PROXY,ToolType.REPEATER, ToolType.TARGET, ToolType.LOGGER)) {
             val menuItemList: MutableList<Component> = mutableListOf()
             val copyParse = JMenuItem("burpee")
-            val requestResponse: HttpRequestResponse = if (event.messageEditorRequestResponse().isPresent) {
-                event.messageEditorRequestResponse().get().requestResponse()
+            val requestResponses: List<HttpRequestResponse> = if (event.messageEditorRequestResponse().isPresent) {
+                listOf( event.messageEditorRequestResponse().get().requestResponse())
             } else {
-                event.selectedRequestResponses()[0]
+                event.selectedRequestResponses().reversed()
             }
+            requestResponses.forEach { requestResponse ->
 
-            copyParse.addActionListener {
-                val result = StringBuilder()
-                val req = requestResponse.request()
-                val res = requestResponse.response()
-                val resStatusCode = res?.statusCode()?.toString() ?: ""
-                val paths = requestResponse.request().path()
-                    .split("/")
-                    .map { it.substringBefore("?") }
-                    .filter { it.isNotEmpty() }
-                val urlParams = req.parameters().filter { it.type() == URL }
-                val headers = req.headers()
-                val cookies = req.parameters().filter { it.type() == COOKIE }
-                val bodyParams = req.parameters().filter { it.type() != COOKIE && it.type() != URL }
+                copyParse.addActionListener {
+                    val result = StringBuilder()
+                    val req = requestResponse.request()
+                    val res = requestResponse.response()
+                    val resStatusCode = res?.statusCode()?.toString() ?: ""
+                    val paths = requestResponse.request().path()
+                        .split("/")
+                        .map { it.substringBefore("?") }
+                        .filter { it.isNotEmpty() }
+                    val urlParams = req.parameters().filter { it.type() == URL }
+                    val headers = req.headers()
+                    val cookies = req.parameters().filter { it.type() == COOKIE }
+                    val bodyParams = req.parameters().filter { it.type() != COOKIE && it.type() != URL }
 
-                if ("Outline" in parseScope) {
-                    provideOutlineStrings(req,result)
-                }
-                if ("Path" in parseScope) {
-                    providePathStrings(paths,result)
-                }
-                if ("Params" in parseScope) {
-                    provideParamsStrings(urlParams,result)
-                }
-                if ("Headers" in parseScope) {
-                    provideHeaderStrings(headers,result)
-                }
-                if ("Cookies" in parseScope) {
-                    provideParamsStrings(cookies,result)
-                }
-                if ("Params" in parseScope) {
-                    provideParamsStrings(bodyParams,result)
-                }
-                if (result.toString() == ""){
-                    result.append("-\t-\t-")
-                }
+                    if ("Outline" in parseScope) {
+                        provideOutlineStrings(req, result)
+                    }
+                    if ("Path" in parseScope) {
+                        providePathStrings(paths, result)
+                    }
+                    if ("Params" in parseScope) {
+                        provideParamsStrings(urlParams, result)
+                    }
+                    if ("Headers" in parseScope) {
+                        provideHeaderStrings(headers, result)
+                    }
+                    if ("Cookies" in parseScope) {
+                        provideParamsStrings(cookies, result)
+                    }
+                    if ("Params" in parseScope) {
+                        provideParamsStrings(bodyParams, result)
+                    }
+                    if (result.toString() == "") {
+                        result.append("-\t-\t-")
+                    }
 
-                val text = result.toString()
+                    val text = result.toString()
 
-                if (mode == 0 || mode == 2) {
-                    val selection = StringSelection(text)
-                    val clipboard = Toolkit.getDefaultToolkit().systemClipboard
-                    clipboard.setContents(selection, selection)
-                    api.logging().logToOutput("\r\ncopied:\t${text}")
-                }
+                    if (mode == 0 || mode == 2) {
+                        val selection = StringSelection(text)
+                        val clipboard = Toolkit.getDefaultToolkit().systemClipboard
+                        clipboard.setContents(selection, selection)
+                        api.logging().logToOutput("\r\ncopied:\t${text}")
+                    }
 
-                if (mode == 1 || mode ==2) {
-                    val excelTask = ExcelTask(api)
-                    api.logging().logToOutput("requestID is${requestID}")
+                    if (mode == 1 || mode == 2) {
+                        val excelTask = ExcelTask(api)
+                        api.logging().logToOutput("requestID is${requestID}")
 
-                    // insert summary detail
-                    val summary = StringBuilder()
-                    provideSummaryRowStrings(req,summary,resStatusCode)
-                    val summaryData = tsvToList(summary.toString())
-                    excelTask.selectSheet("requests")
-                    excelTask.insert(summaryData)
-                    api.logging().logToOutput("requestID${requestID}:\tsummaryData:${summaryData}")
+                        // insert summary detail
+                        val summary = StringBuilder()
+                        provideSummaryRowStrings(req, summary, resStatusCode)
+                        val summaryData = tsvToList(summary.toString())
+                        excelTask.selectSheet("requests")
+                        excelTask.insert(summaryData)
+                        api.logging().logToOutput("requestID${requestID}:\tsummaryData:${summaryData}")
 
-                    // insert request
-                    val detailData = tsvToList(text)
-                    excelTask.selectSheet("$requestID")
-                    excelTask.insert(detailData)
-                    api.logging().logToOutput("requestID${requestID}:\tdetailData:${detailData}")
+                        // insert request
+                        val detailData = tsvToList(text)
+                        excelTask.selectSheet("$requestID")
+                        excelTask.insert(detailData)
+                        api.logging().logToOutput("requestID${requestID}:\tdetailData:${detailData}")
 
-                    // save
-                    excelTask.saveWorkbook()
-                    api.logging().logToOutput("\r\nsaved to $outputFile")
-                    ++requestID
+                        // save
+                        excelTask.saveWorkbook()
+                        api.logging().logToOutput("\r\nsaved to $outputFile")
+                        ++requestID
 
+                    }
                 }
             }
 
