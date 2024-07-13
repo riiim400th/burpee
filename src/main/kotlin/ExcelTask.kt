@@ -52,7 +52,7 @@ class ExcelTask(private val api: MontoyaApi) {
             cellStyle.setFont(font)
         }
 
-        if (color.isNotEmpty()&&highlightRows) {
+        if (color!="NONE"&&highlightRows) {
             val indexedColors = when (color){
                 "RED" -> IndexedColors.RED
                 "ORANGE" -> IndexedColors.LIGHT_ORANGE
