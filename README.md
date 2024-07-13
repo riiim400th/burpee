@@ -5,6 +5,9 @@ Burpee is a Burp Suite extension that extracts parameters to Excel and the Clipb
 
 ![head_image](https://github.com/user-attachments/assets/82dbe607-3847-4d04-b720-6867a33e10f8)
 
+[![image](https://github.com/user-attachments/assets/77d1bf6a-dbca-4dae-a955-72b9a85e641d)](https://youtu.be/no15BP_kVHA)
+
+
 ## Features
 - **Copy as TSV Format:** Formats HTTP data in TSV, ideal for pasting into Excel.
 - **Write to Excel:** Automatically generates sheets for request URLs and parameters.
