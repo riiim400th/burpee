@@ -40,8 +40,7 @@ class MenuTask(private val api: MontoyaApi) : ContextMenuItemsProvider {
                 .append("\r\n")
                 .append("TYPE\t")
                 .append("NAME\t")
-                .append("VALUE\t")
-                .append("\r\n")
+                .append("VALUE")
         }
 
     private fun providePathStrings(paths: List<String>, result: StringBuilder) {
@@ -52,12 +51,12 @@ class MenuTask(private val api: MontoyaApi) : ContextMenuItemsProvider {
                 p = URLDecoder.decode(path, "UTF-8")
             }
             result
+                .append("\r\n")
                 .append("PATH")
                 .append("\t")
                 .append("-")
                 .append("\t")
                 .append(p)
-                .append("\r\n")
         }
     }
     private fun provideHeaderStrings(headers: List<HttpHeader>, result: StringBuilder) {
@@ -69,12 +68,12 @@ class MenuTask(private val api: MontoyaApi) : ContextMenuItemsProvider {
                         v = URLDecoder.decode(v, "UTF-8")
                     }
                     result
+                        .append("\r\n")
                         .append("HEADER")
                         .append("\t")
                         .append(header.name())
                         .append("\t")
                         .append(v)
-                        .append("\r\n")
                 } else {
                     api.logging().logToOutput("skip parse ${i + 1}:\t${header.name()} is in ignoreParamHeaderNames")
                 }
@@ -89,15 +88,15 @@ class MenuTask(private val api: MontoyaApi) : ContextMenuItemsProvider {
                 v = URLDecoder.decode(v, "UTF-8")
             }
             result
+                .append("\r\n")
                 .append(param.type())
                 .append("\t")
                 .append(param.name())
                 .append("\t")
                 .append(v)
-                .append("\r\n")
         }
     }
-    private fun provideSummaryRowStrings(request:  HttpRequest,result: StringBuilder,statusCode:String) {
+    private fun provideSummaryRowStrings(request:  HttpRequest,result: StringBuilder,statusCode:String,note:String) {
         var url = request.url()
         var referer = request.headers().find { it.name() == "Referer" }?.value() ?: "?"
         if ("URL" in valueDecode) {
@@ -114,13 +113,13 @@ class MenuTask(private val api: MontoyaApi) : ContextMenuItemsProvider {
             .append("$url\t")
             .append("${request.method()}\t")
             .append("$statusCode\t")
-            .append(request.parameters().count { it.type() != COOKIE }.toString())
-            .append("\r\n")
+            .append("${request.parameters().count { it.type() != COOKIE }.toString()}\t")
+            .append(note)
     }
 
 
     private fun tsvToList(text: String): List<List<String>> {
-        val lines = text.trim().split("\r\n")
+        val lines = text.split("\r\n")
         val data = lines.map { line ->
             line.split("\t")
         }
@@ -143,6 +142,12 @@ class MenuTask(private val api: MontoyaApi) : ContextMenuItemsProvider {
                     val req = requestResponse.request()
                     val res = requestResponse.response()
                     val resStatusCode = res?.statusCode()?.toString() ?: ""
+                    val annotation = requestResponse.annotations()
+                    val notes = annotation.notes()
+                    val highlight = annotation.highlightColor().name
+                    api.logging().logToOutput("\r\nnotes to $notes")
+                    api.logging().logToOutput("\r\nhighlight to $highlight")
+
                     val paths = requestResponse.request().path()
                         .split("/")
                         .map { it.substringBefore("?") }
@@ -189,16 +194,19 @@ class MenuTask(private val api: MontoyaApi) : ContextMenuItemsProvider {
 
                         // insert summary detail
                         val summary = StringBuilder()
-                        provideSummaryRowStrings(req, summary, resStatusCode)
+                        provideSummaryRowStrings(req, summary, resStatusCode,notes)
                         val summaryData = tsvToList(summary.toString())
                         excelTask.selectSheet("requests")
-                        excelTask.insert(summaryData)
+                        excelTask.insert(summaryData,false,highlight)
                         api.logging().logToOutput("requestID${requestID}:\tsummaryData:${summaryData}")
 
                         // insert request
+                        val highlightRowsBool = highlightRows
+                        highlightRows = false
                         val detailData = tsvToList(text)
                         excelTask.selectSheet("$requestID")
                         excelTask.insert(detailData)
+                        highlightRows=highlightRowsBool
                         api.logging().logToOutput("requestID${requestID}:\tdetailData:${detailData}")
 
                         // save

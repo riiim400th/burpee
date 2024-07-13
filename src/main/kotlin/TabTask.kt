@@ -9,6 +9,7 @@ import javax.swing.*
 val ignoreHeaderNames = mutableListOf<String>()
 val parseScope = mutableListOf("Outline","Path","Headers", "Params", "Cookies")
 val valueDecode = mutableListOf<String>()
+var highlightRows = false
 var outputFile = ""
 val comboBox = JComboBox(mode_options.values.toTypedArray())
 var requestID = 0
@@ -37,12 +38,12 @@ class TabTask(private val api: MontoyaApi) : JPanel() {
         ignoreHeaderNames.addAll(initialIgnoreParamHeaderNames)
         addModeCheck()
         addExcelFile()
-        addSeparator(2,0)
+        addHeightSeparator(2,0)
         addIgnoreBlock()
         addCheckBoxes()
         addDecodeCheck()
-
-
+        addWidthSeparator(6,2)
+        addColorCheck()
     }
 
     private fun addModeCheck() {
@@ -335,12 +336,43 @@ class TabTask(private val api: MontoyaApi) : JPanel() {
         this.add(urlDecCheckBox, c)
 
     }
+    private fun addColorCheck() {
+        val c = GridBagConstraints()
+        c.insets = Insets(5, 10, 5, 10)
 
+        val highlightCheckBox = JCheckBox("Reflect color", false)
+        highlightCheckBox.toolTipText =
+            "Reflect the highlight color of the Proxy tab onto the rows of the Request sheet."
+
+        highlightCheckBox.addActionListener {
+            if (highlightCheckBox.isSelected) {
+                if (outputFile== "") {
+                    alert("Select file at first.")
+                    highlightCheckBox.isSelected = false
+                    return@addActionListener
+                }
+                highlightRows = true
+                api.logging().logToOutput("highlight:\t${highlightRows}")
+            } else {
+                highlightRows = false
+                api.logging().logToOutput("highlight:\t${highlightRows}")
+            }
+        }
+
+        // 配置
+        c.gridx = 6
+        c.gridy = 3
+        this.add(JLabel("Request Highlight"), c)
+
+        c.gridy = 4
+        this.add(highlightCheckBox, c)
+
+    }
     private fun alert(message:String){
         JOptionPane.showMessageDialog(this, message, "burpee", JOptionPane.INFORMATION_MESSAGE)
     }
 
-    private fun addSeparator(gridx: Int, gridy: Int) {
+    private fun addHeightSeparator(gridx: Int, gridy: Int) {
         val separator = JSeparator(SwingConstants.VERTICAL)
         val c = GridBagConstraints()
         c.gridx = gridx
@@ -350,6 +382,15 @@ class TabTask(private val api: MontoyaApi) : JPanel() {
         c.gridheight = GridBagConstraints.REMAINDER
         this.add(separator, c)
     }
-
+    private fun addWidthSeparator(gridx: Int, gridy: Int) {
+        val separator = JSeparator(SwingConstants.HORIZONTAL)
+        val c = GridBagConstraints()
+        c.gridx = gridx
+        c.gridy = gridy
+        c.fill = GridBagConstraints.HORIZONTAL
+        c.insets = Insets(20, 20, 20, 20)
+        c.gridwidth = GridBagConstraints.REMAINDER
+        this.add(separator, c)
+    }
 
 }
