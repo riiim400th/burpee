@@ -13,7 +13,7 @@ repositories {
 }
 
 dependencies {
-    implementation("org.apache.poi:poi-ooxml:5.2.3")
+    implementation("org.apache.poi:poi-ooxml:5.3.0")
     implementation("net.portswigger.burp.extensions:montoya-api:2023.3")
 }
 
