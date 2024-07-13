@@ -52,7 +52,7 @@ class ExcelTask(private val api: MontoyaApi) {
             cellStyle.setFont(font)
         }
 
-        if (color!="NONE"&&highlightRows) {
+        if (highlightRows) {
             val indexedColors = when (color){
                 "RED" -> IndexedColors.RED
                 "ORANGE" -> IndexedColors.LIGHT_ORANGE
@@ -66,8 +66,10 @@ class ExcelTask(private val api: MontoyaApi) {
                 "DEFAULT" -> IndexedColors.GREY_50_PERCENT
                 else -> IndexedColors.WHITE
             }
-            cellStyle.fillForegroundColor = indexedColors.index
-            cellStyle.fillPattern = FillPatternType.SOLID_FOREGROUND
+            if(color!="NONE") {
+                cellStyle.fillForegroundColor = indexedColors.index
+                cellStyle.fillPattern = FillPatternType.SOLID_FOREGROUND
+            }
         }
         cellStyle.borderTop = BorderStyle.THIN
         cellStyle.borderBottom = BorderStyle.THIN
