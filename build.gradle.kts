@@ -1,12 +1,13 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "1.7.20"
-    id("com.github.johnrengelman.shadow") version "7.1.2"
+    kotlin("jvm") version "2.0.20-Beta2"
+    id("com.github.johnrengelman.shadow") version "8.1.1"
 }
 
 group = "org.example"
-version = "1.2.1"
+version = "1.2.2"
 
 repositories {
     mavenCentral()
@@ -14,13 +15,16 @@ repositories {
 
 dependencies {
     implementation("org.apache.poi:poi-ooxml:5.3.0")
-    implementation("net.portswigger.burp.extensions:montoya-api:2023.3")
+    implementation("net.portswigger.burp.extensions:montoya-api:2023.12.1")
 }
 
 tasks.test {
     useJUnitPlatform()
 }
 
-tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "1.8"
+
+tasks.withType<KotlinCompile>().configureEach{
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_21)
+    }
 }
