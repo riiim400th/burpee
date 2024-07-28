@@ -14,6 +14,7 @@ var outputFile = ""
 val comboBox = JComboBox(mode_options.values.toTypedArray())
 var requestID = 0
 var created = false
+
 class TabTask(private val api: MontoyaApi) : JPanel() {
 
     init {

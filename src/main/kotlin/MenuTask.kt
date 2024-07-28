@@ -114,7 +114,7 @@ class MenuTask(private val api: MontoyaApi) : ContextMenuItemsProvider {
             .append("${request.method()}\t")
             .append("$statusCode\t")
             .append("${request.parameters().count { it.type() != COOKIE }.toString()}\t")
-            .append(note)
+            .append(note.replace("\t","    "))
     }
 
 
