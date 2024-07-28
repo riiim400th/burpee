@@ -4,9 +4,11 @@ import burp.api.montoya.MontoyaApi
 import org.apache.poi.ss.usermodel.Cell
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import java.io.File
+import java.io.FileNotFoundException
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import org.apache.poi.ss.usermodel.*
+import javax.swing.JOptionPane
 
 class ExcelTask(private val api: MontoyaApi) {
 
@@ -22,9 +24,21 @@ class ExcelTask(private val api: MontoyaApi) {
     private var sheet = workbook.getSheet("requests") ?: workbook.createSheet("requests")
     private var currentRowNum = sheet.physicalNumberOfRows
     fun insertRequestsSheetColumn() {
-        val column = listOf(listOf("No.","action","Referer URL","Dst URL","Dst URL(with parameters)","Method","Status Code","Parameter count","Note"))
+        val column = listOf(
+            listOf(
+                "No.",
+                "action",
+                "Referer URL",
+                "Dst URL",
+                "Dst URL(with parameters)",
+                "Method",
+                "Status Code",
+                "Parameter count",
+                "Note"
+            )
+        )
         highlightRows = true
-        this.insert(column,true,"DEFAULT")
+        this.insert(column, true, "DEFAULT")
         this.saveWorkbook()
         highlightRows = false
         requestID = currentRowNum
@@ -53,7 +67,7 @@ class ExcelTask(private val api: MontoyaApi) {
         }
 
         if (highlightRows) {
-            val indexedColors = when (color){
+            val indexedColors = when (color) {
                 "RED" -> IndexedColors.RED
                 "ORANGE" -> IndexedColors.LIGHT_ORANGE
                 "YELLOW" -> IndexedColors.YELLOW
@@ -66,7 +80,7 @@ class ExcelTask(private val api: MontoyaApi) {
                 "DEFAULT" -> IndexedColors.GREY_50_PERCENT
                 else -> IndexedColors.WHITE
             }
-            if(color!="NONE") {
+            if (color != "NONE") {
                 cellStyle.fillForegroundColor = indexedColors.index
                 cellStyle.fillPattern = FillPatternType.SOLID_FOREGROUND
             }
@@ -80,7 +94,7 @@ class ExcelTask(private val api: MontoyaApi) {
             for ((cellIndex, cellData) in rowData.withIndex()) {
                 val cell = row.createCell(cellIndex)
 
-                    cell.cellStyle = cellStyle
+                cell.cellStyle = cellStyle
 
                 setCellValue(cell, cellData)
             }
@@ -99,9 +113,20 @@ class ExcelTask(private val api: MontoyaApi) {
     }
 
     fun saveWorkbook() {
-        FileOutputStream(outputFile).use { fileOut ->
-            workbook.write(fileOut)
+        try {
+            FileOutputStream(outputFile).use { fileOut ->
+                workbook.write(fileOut)
+            }
+            api.logging().logToOutput("Workbook saved to:\t$outputFile")
+        } catch (e: FileNotFoundException) {
+            JOptionPane.showMessageDialog(
+                null,
+                "File not found. Did you delete it or leave it open?",
+                "burpee",
+                JOptionPane.INFORMATION_MESSAGE
+            )
+            api.logging().logToOutput("Failed saving workbook to:\t$outputFile")
         }
-        api.logging().logToOutput("Workbook saved to:\t$outputFile")
+
     }
 }
