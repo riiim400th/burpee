@@ -4,6 +4,7 @@ import burp.api.montoya.MontoyaApi
 import java.awt.*
 import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.Transferable
+import java.net.URI
 import javax.swing.*
 
 val ignoreHeaderNames = mutableListOf<String>()
@@ -45,6 +46,11 @@ class TabTask(private val api: MontoyaApi) : JPanel() {
         addDecodeCheck()
         addWidthSeparator(6,2)
         addColorCheck()
+        val latest = PollUpdate(api, ver).poll()
+        if (latest.updatable) {
+            addWidthSeparator(6,5)
+            addUpdateNotify(latest.latest.tagName,latest.latest.htmlUrl)
+        }
     }
 
     private fun addModeCheck() {
@@ -369,6 +375,59 @@ class TabTask(private val api: MontoyaApi) : JPanel() {
         this.add(highlightCheckBox, c)
 
     }
+
+    private fun addUpdateNotify(tag: String, url: String) {
+        val c = GridBagConstraints()
+        c.insets = Insets(5, 10, 5, 10)
+
+        val openLinkButton = JButton("Update to $tag")
+        openLinkButton.addActionListener {
+            try {
+                Desktop.getDesktop().browse(URI(url))
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+        openLinkButton.toolTipText =
+            "Latest version $tag has been released. \nPlease download it from here."
+
+        // 配置
+        c.gridx = 6
+        c.gridy = 6
+        this.add(openLinkButton, c)
+
+    }
+
+
+    private fun alertUpdate(tag: String, url: String) {
+        val message = "Latest version $tag has been released. Please download it from here."
+        val openLinkButton = JButton("Update $tag")
+        openLinkButton.addActionListener {
+            try {
+                Desktop.getDesktop().browse(URI(url))
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
+        val panel = JPanel()
+        panel.layout = BoxLayout(panel, BoxLayout.Y_AXIS)
+        panel.add(JLabel(message))
+        panel.add(Box.createVerticalStrut(10))
+        panel.add(openLinkButton)
+
+        JOptionPane.showOptionDialog(
+            null,
+            panel,
+            "Update Available",
+            JOptionPane.DEFAULT_OPTION,
+            JOptionPane.INFORMATION_MESSAGE,
+            null,
+            arrayOf("Close"),
+            "Close"
+        )
+    }
+
     private fun alert(message:String){
         JOptionPane.showMessageDialog(this, message, "burpee", JOptionPane.INFORMATION_MESSAGE)
     }
