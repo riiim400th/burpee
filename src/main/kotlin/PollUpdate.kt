@@ -1,6 +1,5 @@
 package burpee
 
-import burp.api.montoya.MontoyaApi
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
@@ -19,36 +18,35 @@ data class UpdateInfo(
     val latest: Latest
 )
 
-class PollUpdate(api: MontoyaApi, ver: String) {
-    private val logging = api.logging()
+class PollUpdate(ver: String) {
     private val nowVer = ver
     private val objectMapper = ObjectMapper()
-
     private val url = "https://api.github.com/repos/riiim400th/burpee/releases/latest"
 
-    private fun doGet(url: String): String {
-        val connection = URI(url).toURL().openConnection() as HttpURLConnection
-        return try {
-            connection.requestMethod = "GET"
-            connection.inputStream.bufferedReader().use { it.readText() }
-        } finally {
-            connection.disconnect()
-        }
-    }
+    private fun createConnection(url: String): HttpURLConnection? =
+        runCatching { URI(url).toURL().openConnection() as HttpURLConnection }.getOrNull()
 
-    private fun mapRes(responseString: String): Latest {
-        return objectMapper.readValue(responseString, Latest::class.java)
-    }
+    // Response to String
+    private fun getResponse(connection: HttpURLConnection?): String =
+        connection?.let {
+            runCatching {
+                it.requestMethod = "GET"
+                it.inputStream.bufferedReader().use { reader -> reader.readText() }
+            }.getOrDefault("")
+        } ?: ""
 
-    fun poll(): UpdateInfo {
-        val response = doGet(url)
+    // Return Latest instance
+    private fun getLatest(responseString: String): Latest =
+        runCatching { objectMapper.readValue(responseString, Latest::class.java) }.getOrDefault(Latest("", ""))
 
-        val latest = mapRes(response)
-        val updateInfo = if (latest.tagName != nowVer) {
-            UpdateInfo(true, Latest(latest.htmlUrl, latest.tagName))
-        } else {
-            UpdateInfo(false, Latest(latest.htmlUrl, latest.tagName))
-        }
-        return updateInfo
-    }
+    // return UpdateInfo instance
+    private fun shouldUpdate(latest: Latest): UpdateInfo =
+        UpdateInfo(latest.tagName != nowVer, latest)
+
+    // PollUpdate main method
+    fun poll(): UpdateInfo =
+        createConnection(url)
+            .let(::getResponse)
+            .let(::getLatest)
+            .let(::shouldUpdate)
 }

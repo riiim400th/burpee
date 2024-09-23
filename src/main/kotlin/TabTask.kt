@@ -1,456 +1,385 @@
 package burpee
 
-import burp.api.montoya.MontoyaApi
+import burpee.SelectFile.processSelectedFile
 import java.awt.*
 import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.Transferable
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
+import java.io.File
+import java.io.IOException
 import java.net.URI
+import java.util.*
 import javax.swing.*
 
-val ignoreHeaderNames = mutableListOf<String>()
-val parseScope = mutableListOf("Outline","Path","Headers", "Params", "Cookies")
-val valueDecode = mutableListOf<String>()
-var highlightRows = false
-var outputFile = ""
-val comboBox = JComboBox(mode_options.values.toTypedArray())
-var requestID = 0
-var created = false
 
-class TabTask(private val api: MontoyaApi) : JPanel() {
+class TabTask : JPanel() {
+    private val comboBox = JComboBox(
+        mapOf(
+            0 to "clip board",
+            1 to "Excel file",
+            2 to "clip board & Excel file"
+        ).values.toTypedArray()
+    ).apply {
+        addActionListener {
+            if (comBoxUserChange)
+                stateHolder.state = stateHolder.state.copy(mode = this.selectedIndex)
+
+        }
+    }
+    private var comBoxUserChange = true
+    private val filePathLabel = JLabel("No file selected")
+    private val listModel = DefaultListModel<String>().apply { addAll(stateHolder.state.ignoreHeaderNames) }
+    private val backButton = JButton("←").apply {
+        toolTipText = "back"
+        isEnabled = false
+        addActionListener {
+            val ignoreHeaderNames = prevListModel
+            prevListModel = listOf()
+            stateHolder.state = stateHolder.state.copy(ignoreHeaderNames = ignoreHeaderNames)
+        }
+    }
+    private val outlineCheckBox = getCheckBox("Outline")
+    private val pathCheckBox = getCheckBox("Path")
+    private val headerCheckBox = getCheckBox("Headers")
+    private val paramsCheckBox = getCheckBox("Params")
+    private val cookiesCheckBox = getCheckBox("Cookies")
+    private val urlDecCheckBox = JCheckBox("URL Decode", stateHolder.state.valueDecode.contains("URL"))
+        .apply {
+            addActionListener {
+                stateHolder.state =
+                    stateHolder.state.copy(valueDecode = stateHolder.state.valueDecode.toMutableList().apply {
+                        if (isSelected) add("URL") else remove("URL")
+                    })
+            }
+        }
+    private val highlightCheckBox = JCheckBox("Reflect color", stateHolder.state.highlightRows).apply {
+        toolTipText = "Reflect the highlight color of the Proxy tab onto the rows of the Request sheet."
+        addActionListener {
+            stateHolder.state = stateHolder.state.copy(highlightRows = this.isSelected)
+        }
+    }
+
+    private var prevListModel = listOf<String>()
+
+    private fun updateTab(state: State) {
+        Api.log("State change")
+        comBoxUserChange = false
+        comboBox.selectedIndex = state.mode
+        comBoxUserChange = true
+        filePathLabel.text = fileLabel(state)
+        filePathLabel.toolTipText =
+            stateHolder.state.outputFile
+        listModel.clear()
+        listModel.addAll(state.ignoreHeaderNames)
+        viewBackButton()
+        outlineCheckBox.isSelected = state.parseScope["Outline"]!!
+        pathCheckBox.isSelected = state.parseScope["Path"]!!
+        headerCheckBox.isSelected = state.parseScope["Headers"]!!
+        paramsCheckBox.isSelected = state.parseScope["Params"]!!
+        cookiesCheckBox.isSelected = state.parseScope["Cookies"]!!
+        urlDecCheckBox.isSelected = state.valueDecode.contains("URL")
+        highlightCheckBox.isSelected = state.highlightRows
+        Api.log("State is $state")
+    }
+
 
     init {
         this.layout = GridBagLayout()
-        val initialIgnoreParamHeaderNames = listOf(
-            "Host",
-            "User-Agent",
-            "Accept",
-            "Accept-Language",
-            "Accept-Encoding",
-            "Referer",
-            "Origin",
-            "Sec-Fetch-Dest",
-            "Sec-Fetch-Mode",
-            "Sec-Fetch-Site",
-            "Priority",
-            "Pragma",
-            "Cache-Control",
-            "Content-Length",
-            "Te",
-            "Connection",)
-        ignoreHeaderNames.addAll(initialIgnoreParamHeaderNames)
-        addModeCheck()
-        addExcelFile()
-        addHeightSeparator(2,0)
-        addIgnoreBlock()
-        addCheckBoxes()
-        addDecodeCheck()
-        addWidthSeparator(6,2)
-        addColorCheck()
-        val latest = PollUpdate(api, ver).poll()
-        if (latest.updatable) {
-            addWidthSeparator(6,5)
-            addUpdateNotify(latest.latest.tagName,latest.latest.htmlUrl)
+        stateHolder.addErrorObserver { errors ->
+            alert(errors.joinToString("\r\n"))
+            updateTab(stateHolder.state)
         }
+        stateHolder.addObserver { state -> updateTab(state) }
+        addComponents()
     }
 
-    private fun addModeCheck() {
-        val c = GridBagConstraints()
-        c.insets = Insets(5, 10, 5, 10)
+    private fun addComponents() {
+        addOutputSection()
+        addFileSection()
 
-        comboBox.addActionListener {
-            if (comboBox.selectedIndex==0){
-                setMode(0,true)
-                api.logging().logToOutput("Set mode:\t$mode")
-                comboBox.selectedIndex = mode
-                if (mode!=0){alert("Select file at first.")}
-            }
-            if (comboBox.selectedIndex==1){
-                setMode(1,true)
-                api.logging().logToOutput("Set mode:\t$mode")
-                comboBox.selectedIndex = mode
-                if (mode!=1){alert("Select file at first.")}
-            }
-            if (comboBox.selectedIndex==2) {
-                setMode(2,true)
-                api.logging().logToOutput("Set mode:\t$mode")
-                comboBox.selectedIndex = mode
-                if (mode!=2){alert("Select file at first.")}
-            }
+        addIgnoreHeaderSection()
 
-        }
-
-        c.gridx = 0
-        c.gridy =0
-        this.add(JLabel("Output to: "), c)
-        c.gridy = 1
-        this.add(comboBox, c)
-
+        addScopeSection()
+        addDecodeSection()
+        addHighlightSection()
+        addUpdateSection()
+        addSettingButton()
+        addSeparators()
     }
 
-    private fun addExcelFile() {
-        val c = GridBagConstraints()
-        c.insets = Insets(5, 10, 5, 10)
-        val filePathLabel = JLabel("No file selected")
-        val fileButton = JButton("Select File")
-
-        fileButton.addActionListener {
-            filePathLabel.text = "loading ..."
-            val fileChooser = JFileChooser()
-            val result = fileChooser.showOpenDialog(null)
-
-            if (result == JFileChooser.APPROVE_OPTION) {
-                val selectedFile = fileChooser.selectedFile
-
-                // 拡張子の確認
-                if (selectedFile.extension != "xlsx") {
-                    alert("File extension must be '.xlsx'")
-                    return@addActionListener
-                }
-
-                // ファイルの存在確認
-                if (!selectedFile.exists()) {
-                    try {
-                        created = true
-                        if (!selectedFile.createNewFile()) {
-                            created = false
-                            api.logging().logToOutput("Failed to create file:\t${selectedFile.absolutePath}")
-                            return@addActionListener
-                        }
-                    } catch (e: Exception) {
-                        created = false
-                        api.logging().logToOutput("Error creating file: ${e.message}")
-                        return@addActionListener
-                    }
-                } else {
-                    created = false
-                }
-
-
-                // ファイルが存在する場合の処理
-                api.logging().logToOutput("File ${if (selectedFile.exists()) "already exists" else "created"}:\t${selectedFile.absolutePath}")
-                outputFile = selectedFile.absolutePath
-                filePathLabel.text = selectedFile.name
-
-                if (created) {
-                    ExcelTask(api).insertRequestsSheetColumn()
-                } else {
-                    ExcelTask(api).updateRequestID()
-                }
-
-                setMode(2, false)
-                api.logging().logToOutput("Set mode:\t$mode")
-            }
+    private fun addComponentToGrid(
+        component: JComponent,
+        x: Int,
+        y: Int,
+        gridwidth: Int = 1,
+        gridheight: Int = 1,
+        anchor: Int = GridBagConstraints.CENTER,
+        insets: Insets = Insets(5, 20, 5, 20),
+        fill: Int = GridBagConstraints.NONE
+    ) {
+        val c = GridBagConstraints().apply {
+            gridx = x
+            gridy = y
+            this.gridwidth = gridwidth
+            this.gridheight = gridheight
+            this.anchor = anchor
+            this.insets = insets
+            this.fill = fill
         }
-
-        // 配置
-        c.gridx = 1
-        c.gridy = 0
-        this.add(JLabel("Excel File"), c)
-
-        c.gridy = 1
-        this.add(filePathLabel, c)
-
-        c.gridy = 2
-        this.add(fileButton, c)
-    }
-    private fun addIgnoreBlock() {
-        val c = GridBagConstraints()
-        c.insets = Insets(5, 10, 5, 10)
-        //ブロックタイトル
-        c.fill = GridBagConstraints.HORIZONTAL
-        c.gridx = 3
-        c.gridy = 0
-        c.gridwidth = 2
-        this.add(JLabel("Ignore Header"), c)
-        // ignoreリスト表示
-        //初期値
-        val listModel = DefaultListModel<String>()
-        ignoreHeaderNames.forEach { listModel.addElement(it) }
-        val jList = JList(listModel)
-        jList.visibleRowCount = 10
-        jList.fixedCellWidth = 100
-        val scrollPane = JScrollPane(jList)
-        c.fill = GridBagConstraints.BOTH
-        c.gridx = 3
-        c.gridy = 1
-        c.gridheight = 5
-        c.gridwidth = 2
-        this.add(scrollPane, c)
-
-        // Add Pasteボタン
-        val addPasteButton = JButton("Add Paste")
-        addPasteButton.toolTipText =
-            "Add headers that are excluded from parsing from the clipboard."
-        c.fill = GridBagConstraints.HORIZONTAL
-        c.gridx = 3
-        c.gridy = 14
-        c.gridwidth = 1
-        this.add(addPasteButton, c)
-
-        // Overwrite Pasteボタン
-        val overwritePasteButton = JButton("Overwrite Paste")
-        overwritePasteButton.toolTipText =
-            "Overwrite headers that are excluded from parsing from the clipboard."
-        c.fill = GridBagConstraints.HORIZONTAL
-        c.gridx = 4
-        c.gridy = 14
-        c.gridwidth = 1
-        this.add(overwritePasteButton, c)
-
-        addPasteButton.addActionListener {
-            val clipboard = Toolkit.getDefaultToolkit().systemClipboard
-            val contents: Transferable? = clipboard.getContents(null)
-            if (contents != null && contents.isDataFlavorSupported(DataFlavor.stringFlavor)) {
-                try {
-                    val pasteText = contents.getTransferData(DataFlavor.stringFlavor) as String
-                    val items = pasteText.split("\n").filter { it.isNotEmpty() }
-                    for (item in items) {
-                        listModel.addElement(item)
-                        ignoreHeaderNames.add(item)
-                    }
-                    api.logging().logToOutput("ignoreHeaderNames:\t${ignoreHeaderNames}")
-                } catch (ex: Exception) {
-                    ex.printStackTrace()
-                }
-            }
-        }
-
-        //paste action
-        overwritePasteButton.addActionListener {
-            val clipboard = Toolkit.getDefaultToolkit().systemClipboard
-            val contents: Transferable? = clipboard.getContents(null)
-            if (contents != null && contents.isDataFlavorSupported(DataFlavor.stringFlavor)) {
-                try {
-                    val pasteText = contents.getTransferData(DataFlavor.stringFlavor) as String
-                    val items = pasteText.split("\n").filter { it.isNotEmpty() }
-                    listModel.clear()
-                    ignoreHeaderNames.clear()
-                    for (item in items) {
-                        listModel.addElement(item)
-                        ignoreHeaderNames.add(item)
-                    }
-                    api.logging().logToOutput("ignoreHeaderNames:\t${ignoreHeaderNames}")
-                } catch (ex: Exception) {
-                    ex.printStackTrace()
-                }
-            }
-        }
-    }
-    private fun addCheckBoxes() {
-        val c = GridBagConstraints()
-        c.insets = Insets(5, 10, 5, 10)
-        val outlineCheckBox = JCheckBox("Outline", true)
-        val pathCheckBox = JCheckBox("Path", true)
-        val headerCheckBox = JCheckBox("Headers", true)
-        val paramsCheckBox = JCheckBox("Params", true)
-        val cookiesCheckBox = JCheckBox("Cookies", true)
-
-        outlineCheckBox.addActionListener {
-            if (outlineCheckBox.isSelected) {
-                parseScope.add("Outline")
-                api.logging().logToOutput("parseScope:\t${parseScope}")
-            } else {
-                parseScope.remove("Outline")
-                api.logging().logToOutput("parseScope:\t${parseScope}")
-            }
-        }
-
-        pathCheckBox.addActionListener {
-            if (pathCheckBox.isSelected) {
-                parseScope.add("Path")
-                api.logging().logToOutput("parseScope:\t${parseScope}")
-            } else {
-                parseScope.remove("Path")
-                api.logging().logToOutput("parseScope:\t${parseScope}")
-            }
-        }
-
-        headerCheckBox.addActionListener {
-            if (headerCheckBox.isSelected) {
-                parseScope.add("Headers")
-                api.logging().logToOutput("parseScope:\t${parseScope}")
-            } else {
-                parseScope.remove("Headers")
-                api.logging().logToOutput("parseScope:\t${parseScope}")
-            }
-        }
-
-        cookiesCheckBox.addActionListener {
-            if (cookiesCheckBox.isSelected) {
-                parseScope.add("Cookies")
-                api.logging().logToOutput("parseScope:\t${parseScope}")
-            } else {
-                parseScope.remove("Cookies")
-                api.logging().logToOutput("parseScope:\t${parseScope}")
-            }
-        }
-
-        paramsCheckBox.addActionListener {
-            if (paramsCheckBox.isSelected) {
-                parseScope.add("Params")
-                api.logging().logToOutput("parseScope:\t${parseScope}")
-            } else {
-                parseScope.remove("Params")
-                api.logging().logToOutput("parseScope:\t${parseScope}")
-            }
-        }
-
-
-        // 配置
-        c.fill = GridBagConstraints.HORIZONTAL
-        c.gridx = 5
-        c.gridy = 0
-        this.add(JLabel("Parse Scope"), c)
-        c.gridy = 1
-        this.add(outlineCheckBox, c)
-
-        c.gridy = 2
-        this.add(pathCheckBox, c)
-
-        c.gridy = 3
-        this.add(headerCheckBox, c)
-
-        c.gridy = 4
-        this.add(cookiesCheckBox, c)
-
-        c.gridy = 5
-        this.add(paramsCheckBox, c)
-
-
+        add(component, c)
     }
 
-    private fun addDecodeCheck() {
-        val c = GridBagConstraints()
-        c.insets = Insets(5, 10, 5, 10)
-
-        val urlDecCheckBox = JCheckBox("URL Decode", false)
-
-        urlDecCheckBox.addActionListener {
-            if (urlDecCheckBox.isSelected) {
-                valueDecode.add("URL")
-                api.logging().logToOutput("valueDecode:\t${valueDecode}")
-            } else {
-                valueDecode.remove("URL")
-                api.logging().logToOutput("valueDecode:\t${valueDecode}")
-            }
-        }
-
-        // 配置
-        c.gridx = 6
-        c.gridy = 0
-        this.add(JLabel("Value Decoded"), c)
-        c.gridy = 1
-        this.add(urlDecCheckBox, c)
-
-    }
-    private fun addColorCheck() {
-        val c = GridBagConstraints()
-        c.insets = Insets(5, 10, 5, 10)
-
-        val highlightCheckBox = JCheckBox("Reflect color", false)
-        highlightCheckBox.toolTipText =
-            "Reflect the highlight color of the Proxy tab onto the rows of the Request sheet."
-
-        highlightCheckBox.addActionListener {
-            if (highlightCheckBox.isSelected) {
-                if (outputFile== "") {
-                    alert("Select file at first.")
-                    highlightCheckBox.isSelected = false
-                    return@addActionListener
-                }
-                highlightRows = true
-                api.logging().logToOutput("highlight:\t${highlightRows}")
-            } else {
-                highlightRows = false
-                api.logging().logToOutput("highlight:\t${highlightRows}")
-            }
-        }
-
-        // 配置
-        c.gridx = 6
-        c.gridy = 3
-        this.add(JLabel("Request Highlight"), c)
-
-        c.gridy = 4
-        this.add(highlightCheckBox, c)
-
-    }
-
-    private fun addUpdateNotify(tag: String, url: String) {
-        val c = GridBagConstraints()
-        c.insets = Insets(5, 10, 5, 10)
-
-        val openLinkButton = JButton("Update to $tag")
-        openLinkButton.addActionListener {
-            try {
-                Desktop.getDesktop().browse(URI(url))
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-        openLinkButton.toolTipText =
-            "Latest version $tag has been released. \nPlease download it from here."
-
-        // 配置
-        c.gridx = 6
-        c.gridy = 6
-        this.add(openLinkButton, c)
-
-    }
-
-
-    private fun alertUpdate(tag: String, url: String) {
-        val message = "Latest version $tag has been released. Please download it from here."
-        val openLinkButton = JButton("Update $tag")
-        openLinkButton.addActionListener {
-            try {
-                Desktop.getDesktop().browse(URI(url))
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-
-        val panel = JPanel()
-        panel.layout = BoxLayout(panel, BoxLayout.Y_AXIS)
-        panel.add(JLabel(message))
-        panel.add(Box.createVerticalStrut(10))
-        panel.add(openLinkButton)
-
-        JOptionPane.showOptionDialog(
-            null,
-            panel,
-            "Update Available",
-            JOptionPane.DEFAULT_OPTION,
-            JOptionPane.INFORMATION_MESSAGE,
-            null,
-            arrayOf("Close"),
-            "Close"
+    private fun addSeparators() {
+        addComponentToGrid(JSeparator(SwingConstants.VERTICAL), 2, 0, gridheight = 13, fill = 1)
+        addComponentToGrid(
+            JSeparator(SwingConstants.HORIZONTAL),
+            7,
+            2,
+            gridwidth = 1,
+            fill = 1,
+            insets = Insets(15, 20, 20, 15)
+        )
+        addComponentToGrid(
+            JSeparator(SwingConstants.HORIZONTAL),
+            7,
+            5,
+            gridwidth = 1,
+            fill = 1,
+            insets = Insets(15, 20, 20, 15)
         )
     }
 
-    private fun alert(message:String){
+    private fun addOutputSection() {
+        addComponentToGrid(JLabel("Output to:"), 0, 0)
+        addComponentToGrid(comboBox, 0, 1)
+    }
+
+    private fun addFileSection() {
+        addComponentToGrid(JLabel("Excel File"), 1, 0, anchor = GridBagConstraints.CENTER)
+        addComponentToGrid(filePathLabel, 1, 1, anchor = GridBagConstraints.CENTER)
+        addComponentToGrid(JButton("Select File").apply {
+            addActionListener {
+                filePathLabel.text = "loading ..."
+                val fileChange = { file: File ->
+                    processSelectedFile(file).takeIf { it.isNotEmpty() }?.let { alert(it) }
+                }
+                JFileChooser().let { fileChooser ->
+                    when (fileChooser.showOpenDialog(null)) {
+                        JFileChooser.APPROVE_OPTION -> fileChange(fileChooser.selectedFile)
+                        else -> {}
+                    }
+                }
+                filePathLabel.text = fileLabel(stateHolder.state)
+            }
+        }, 1, 2)
+    }
+
+    private fun addIgnoreHeaderSection() {
+        addComponentToGrid(JLabel("Ignore Header"), 3, 0, gridwidth = 3)
+        addComponentToGrid(JScrollPane(JList(listModel).apply {
+            visibleRowCount = 10
+            fixedCellWidth = 240
+        }), 3, 1, gridwidth = 3, gridheight = 10)
+
+        addComponentToGrid(JButton("Add Paste").apply {
+            toolTipText = "Add headers that are excluded from parsing from the clipboard."
+            addActionListener {
+                updateIgnoreHeader(true)
+            }
+        }, 3, 11, insets = Insets(5, 5, 5, 5))
+        addComponentToGrid(JButton("Overwrite Paste").apply {
+            toolTipText = "Overwrite headers that are excluded from parsing from the clipboard."
+            addActionListener {
+                updateIgnoreHeader(false)
+            }
+        }, 4, 11, insets = Insets(5, 5, 5, 5))
+        addComponentToGrid(backButton, 5, 11, insets = Insets(5, 5, 5, 5))
+    }
+
+    private fun addScopeSection() {
+        addComponentToGrid(JLabel("Parse Scope"), 6, 0)
+        addComponentToGrid(outlineCheckBox, 6, 1, 1, 1, GridBagConstraints.NORTHWEST)
+        addComponentToGrid(pathCheckBox, 6, 2, 1, 1, GridBagConstraints.NORTHWEST)
+        addComponentToGrid(headerCheckBox, 6, 3, 1, 1, GridBagConstraints.NORTHWEST)
+        addComponentToGrid(cookiesCheckBox, 6, 4, 1, 1, GridBagConstraints.NORTHWEST)
+        addComponentToGrid(paramsCheckBox, 6, 5, 1, 1, GridBagConstraints.NORTHWEST)
+    }
+
+    private fun addDecodeSection() {
+        addComponentToGrid(JLabel("Value Decoded"), 7, 0)
+        addComponentToGrid(urlDecCheckBox, 7, 1)
+    }
+
+    private fun addHighlightSection() {
+        addComponentToGrid(JLabel("Request Highlight"), 7, 3)
+        addComponentToGrid(highlightCheckBox, 7, 4)
+    }
+
+    private fun addSettingButton() {
+        addComponentToGrid(JButton(ImageIcon(javaClass.getResource("/setting_icon.png"))).apply {
+            isContentAreaFilled = false
+            isBorderPainted = false
+            isFocusPainted = false
+            addMouseListener(object : MouseAdapter() {
+                override fun mousePressed(e: MouseEvent) {
+                    settingPopupMenu().show(e.component, e.x, e.y)
+                }
+            })
+        }, 8, 0, anchor = GridBagConstraints.WEST, insets = Insets(0, 0, 0, 0))
+    }
+
+    private fun addUpdateSection() {
+        val updateInfo = PollUpdate(ver).poll()
+        if (updateInfo.updatable) {
+            addComponentToGrid(JLabel("Latest Version"), 7, 7)
+            addComponentToGrid(JButton("Update to ${updateInfo.latest.tagName}").apply {
+                toolTipText = "Latest version ${updateInfo.latest.tagName} has been released. \nPlease download it from here."
+                addActionListener {
+                    try {
+                        Desktop.getDesktop().browse(URI(updateInfo.latest.htmlUrl))
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }, 7, 8)
+        }
+    }
+
+
+    private fun updateIgnoreHeader(add: Boolean) {
+        prevListModel = List(listModel.size()) { i -> listModel.get(i) }
+        val clipboard = Toolkit.getDefaultToolkit().systemClipboard
+        val contents: Transferable? = clipboard.getContents(null)
+        if (contents != null && contents.isDataFlavorSupported(DataFlavor.stringFlavor)) {
+            try {
+                val pasteText = contents.getTransferData(DataFlavor.stringFlavor) as String
+                val items = pasteText.split("\n").filter { it.isNotEmpty() }
+
+                val ignoreHeaderNames = when (add) {
+                    true -> stateHolder.state.ignoreHeaderNames.toMutableList().apply { addAll(items) }
+                        .toCollection(LinkedHashSet()).toMutableList()
+
+                    false -> items
+                }
+                stateHolder.state = stateHolder.state.copy(ignoreHeaderNames = ignoreHeaderNames)
+            } catch (ex: Exception) {
+                ex.printStackTrace()
+            }
+        }
+    }
+
+    private fun truncate(text: String): String {
+        return when (text.length > 15) {
+            true -> "${text.take(5)}...${text.takeLast(7)}"
+            false -> text
+        }
+    }
+
+    private fun fileLabel(state: State): String {
+        val text = File(state.outputFile).name
+        return if (text == "") {
+            "No file selected"
+        } else {
+            truncate(text)
+        }
+    }
+
+    private fun viewBackButton() {
+        backButton.isEnabled = prevListModel.isNotEmpty()
+    }
+
+    private fun getCheckBox(scopeName: String): JCheckBox {
+        val parseScope = stateHolder.state.parseScope
+        return JCheckBox(scopeName, parseScope[scopeName] ?: false)
+            .apply {
+                addActionListener {
+                    val updateParseScope = stateHolder.state.parseScope.toMutableMap()
+                    updateParseScope[scopeName] = isSelected
+                    stateHolder.state = stateHolder.state.copy(parseScope = updateParseScope)
+                }
+            }
+    }
+
+    private fun showFileChooserDialog(action: String, onFileSelected: (File) -> Unit) {
+        val fileChooser = JFileChooser()
+        val result = if (action == "save") fileChooser.showSaveDialog(null) else fileChooser.showOpenDialog(null)
+        if (result == JFileChooser.APPROVE_OPTION) {
+            val selectedFile = fileChooser.selectedFile
+
+            // Check file extension
+            if (selectedFile.extension.lowercase() != "json") {
+                JOptionPane.showMessageDialog(
+                    null,
+                    "File extension must be '.json'",
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE
+                )
+                return
+            }
+            onFileSelected(selectedFile)
+        }
+    }
+
+    private fun settingPopupMenu(): JPopupMenu {
+        return JPopupMenu().apply {
+
+            val saveItem = JMenuItem("Save Setting").apply {
+                addActionListener {
+                    showFileChooserDialog("save") { selectedFile ->
+                        try {
+                            SaveJsonTask().exportJson(selectedFile)
+                        } catch (e: IOException) {
+                            alert("Failed to write to ${selectedFile.name}: ${e.message}")
+                        }
+                    }
+                }
+            }
+            val loadMenuItem = JMenuItem("Load Setting")
+                .apply {
+                    addActionListener {
+                        showFileChooserDialog("open") { selectedFile ->
+                            try {
+                                LoadJsonTask().loadJson(selectedFile)
+                            } catch (e: IOException) {
+                                alert("Failed to load ${selectedFile.name}: ${e.message}")
+                            }
+                        }
+                    }
+                }
+
+            val resetMenuItem = JMenuItem("Reset Setting")
+                .apply {
+                    addActionListener {
+                        showConfirmationDialog(
+                            "Reset setting?",
+                            "Confirmation"
+                        ) { isOk ->
+                            if (isOk) {
+                                stateHolder.state = DefaultData.defaultState
+                            }
+                        }
+                    }
+                }
+
+            add(saveItem)
+            add(loadMenuItem)
+            add(resetMenuItem)
+        }
+    }
+
+    private fun alert(message: String) {
         JOptionPane.showMessageDialog(this, message, "burpee", JOptionPane.INFORMATION_MESSAGE)
     }
 
-    private fun addHeightSeparator(gridx: Int, gridy: Int) {
-        val separator = JSeparator(SwingConstants.VERTICAL)
-        val c = GridBagConstraints()
-        c.gridx = gridx
-        c.gridy = gridy
-        c.fill = GridBagConstraints.VERTICAL
-        c.insets = Insets(20, 20, 20, 20)
-        c.gridheight = GridBagConstraints.REMAINDER
-        this.add(separator, c)
-    }
-    private fun addWidthSeparator(gridx: Int, gridy: Int) {
-        val separator = JSeparator(SwingConstants.HORIZONTAL)
-        val c = GridBagConstraints()
-        c.gridx = gridx
-        c.gridy = gridy
-        c.fill = GridBagConstraints.HORIZONTAL
-        c.insets = Insets(20, 20, 20, 20)
-        c.gridwidth = GridBagConstraints.REMAINDER
-        this.add(separator, c)
+    private fun showConfirmationDialog(message: String, title: String, callback: (Boolean) -> Unit) {
+        val result = JOptionPane.showConfirmDialog(
+            null,
+            message,
+            title,
+            JOptionPane.OK_CANCEL_OPTION
+        )
+        callback(result == JOptionPane.OK_OPTION)
     }
 
 }

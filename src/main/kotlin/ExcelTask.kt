@@ -1,131 +1,91 @@
 package burpee
 
-import burp.api.montoya.MontoyaApi
-import org.apache.poi.ss.usermodel.Cell
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import org.apache.poi.ss.usermodel.*
-import javax.swing.JOptionPane
 
-class ExcelTask(private val api: MontoyaApi) {
+class ExcelTask(private val state: State) {
 
-    private val workbook: XSSFWorkbook = if (File(outputFile).exists() && File(outputFile).length() > 0) {
-        FileInputStream(outputFile).use { fileIn ->
+
+    private val workbook: XSSFWorkbook = if (File(state.outputFile).exists() && File(state.outputFile).length() > 0) {
+        FileInputStream(state.outputFile).use { fileIn ->
             XSSFWorkbook(fileIn)
         }
     } else {
         XSSFWorkbook()
     }
-    private var cellStyle = workbook.createCellStyle()
-
     private var sheet = workbook.getSheet("requests") ?: workbook.createSheet("requests")
     private var currentRowNum = sheet.physicalNumberOfRows
-    fun insertRequestsSheetColumn() {
+
+    fun insertRequestsSheetColumn(): ExcelTask {
         val column = listOf(
-            listOf(
-                "No.",
-                "action",
-                "Referer URL",
-                "Dst URL",
-                "Dst URL(with parameters)",
-                "Method",
-                "Status Code",
-                "Parameter count",
-                "Note"
-            )
+            DefaultData.requestSheetColumn
         )
-        highlightRows = true
-        this.insert(column, true, "DEFAULT")
-        this.saveWorkbook()
-        highlightRows = false
-        requestID = currentRowNum
-        api.logging().logToOutput("Data inserted to sheet($sheet):\t$column")
+        this.insert(column, true, "GRAY_50")
+        return this
     }
 
-    fun selectSheet(name: String) {
+    fun selectSheet(name: String = "requests"): ExcelTask {
         sheet = workbook.getSheet(name) ?: workbook.createSheet(name)
-        cellStyle = workbook.createCellStyle()
         currentRowNum = sheet.physicalNumberOfRows
-        api.logging().logToOutput("Sheet pointed at:\t$name")
+        return this
     }
 
-    fun updateRequestID() {
-        this.selectSheet("requests")
-        requestID = currentRowNum
-        api.logging().logToOutput("updateRequestID:\t$requestID")
+    fun getRequestID(): Int {
+        return when (state.outputFile) {
+            "" -> 0
+            else -> this.selectSheet("requests").currentRowNum
+        }
     }
 
-    fun insert(data: List<List<Any>>, bold: Boolean = false, color: String = "") {
-
+    fun insert(data: List<List<Any>>, bold: Boolean = false, color: String = ""): ExcelTask {
+        val cellStyle = workbook.createCellStyle()
         if (bold) {
             val font = workbook.createFont()
             font.bold = true
             cellStyle.setFont(font)
         }
 
-        if (highlightRows) {
-            val indexedColors = when (color) {
-                "RED" -> IndexedColors.RED
-                "ORANGE" -> IndexedColors.LIGHT_ORANGE
-                "YELLOW" -> IndexedColors.YELLOW
-                "GREEN" -> IndexedColors.LIME
-                "CYAN" -> IndexedColors.AQUA
-                "BLUE" -> IndexedColors.INDIGO
-                "PINK" -> IndexedColors.ROSE
-                "MAGENTA" -> IndexedColors.PINK
-                "GRAY" -> IndexedColors.GREY_40_PERCENT
-                "DEFAULT" -> IndexedColors.GREY_50_PERCENT
-                else -> IndexedColors.WHITE
-            }
-            if (color != "NONE") {
-                cellStyle.fillForegroundColor = indexedColors.index
-                cellStyle.fillPattern = FillPatternType.SOLID_FOREGROUND
-            }
+        val indexedColors = when (color) {
+            "RED" -> IndexedColors.RED
+            "ORANGE" -> IndexedColors.LIGHT_ORANGE
+            "YELLOW" -> IndexedColors.YELLOW
+            "GREEN" -> IndexedColors.LIME
+            "CYAN" -> IndexedColors.AQUA
+            "BLUE" -> IndexedColors.INDIGO
+            "PINK" -> IndexedColors.ROSE
+            "MAGENTA" -> IndexedColors.PINK
+            "GRAY" -> IndexedColors.GREY_40_PERCENT
+            "GRAY_50" -> IndexedColors.GREY_50_PERCENT
+            else -> IndexedColors.WHITE
         }
+        cellStyle.fillForegroundColor = indexedColors.index
+        cellStyle.fillPattern = FillPatternType.SOLID_FOREGROUND
         cellStyle.borderTop = BorderStyle.THIN
         cellStyle.borderBottom = BorderStyle.THIN
         cellStyle.borderLeft = BorderStyle.THIN
         cellStyle.borderRight = BorderStyle.THIN
-        for (rowData in data) {
-            val row = sheet.createRow(currentRowNum++)
-            for ((cellIndex, cellData) in rowData.withIndex()) {
-                val cell = row.createCell(cellIndex)
 
-                cell.cellStyle = cellStyle
-
-                setCellValue(cell, cellData)
+        data.forEach { row ->
+            val targetRow = sheet.createRow(currentRowNum++)
+            row.forEachIndexed() { i, cell ->
+                targetRow.createCell(i).apply { this.cellStyle = cellStyle }.setCellValue(cell.toString())
             }
         }
-
-        api.logging().logToOutput("Data inserted to sheet($sheet):\t$data")
+        return this
     }
 
-    private fun setCellValue(cell: Cell, value: Any) {
-        when (value) {
-            is String -> cell.setCellValue(value)
-            is Double -> cell.setCellValue(value)
-            is Int -> cell.setCellValue(value.toDouble())
-            else -> cell.setCellValue(value.toString())
-        }
-    }
-
-    fun saveWorkbook() {
+    fun saveWorkbook(): ExcelTask {
         try {
-            FileOutputStream(outputFile).use { fileOut ->
+            FileOutputStream(state.outputFile).use { fileOut ->
                 workbook.write(fileOut)
             }
-            api.logging().logToOutput("Workbook saved to:\t$outputFile")
+            return this
         } catch (e: FileNotFoundException) {
-            JOptionPane.showMessageDialog(
-                null,
-                "File not found. Did you delete it or leave it open?",
-                "burpee",
-                JOptionPane.INFORMATION_MESSAGE
-            )
-            api.logging().logToOutput("Failed saving workbook to:\t$outputFile")
+            throw FileNotFoundException()
         }
 
     }
