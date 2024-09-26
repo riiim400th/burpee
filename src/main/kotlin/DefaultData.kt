@@ -44,4 +44,5 @@ object DefaultData {
         ),
         valueDecode = listOf("URL")
     )
+    val reposApiUrl = "https://api.github.com/repos/riiim400th/burpee/releases/latest"
 }

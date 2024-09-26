@@ -1,16 +1,12 @@
 package burpee
 
-import com.fasterxml.jackson.annotation.JsonCreator
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.databind.ObjectMapper
+import burp.api.montoya.utilities.json.JsonNode
 import java.net.HttpURLConnection
 import java.net.URI
 
-@JsonIgnoreProperties(ignoreUnknown = true)
-data class Latest @JsonCreator constructor(
-    @JsonProperty("html_url") val htmlUrl: String,
-    @JsonProperty("tag_name") val tagName: String
+data class Latest (
+    val htmlUrl: String,
+    val tagName: String
 )
 
 data class UpdateInfo(
@@ -20,8 +16,7 @@ data class UpdateInfo(
 
 class PollUpdate(ver: String) {
     private val nowVer = ver
-    private val objectMapper = ObjectMapper()
-    private val url = "https://api.github.com/repos/riiim400th/burpee/releases/latest"
+    private val url = DefaultData.reposApiUrl
 
     private fun createConnection(url: String): HttpURLConnection? =
         runCatching { URI(url).toURL().openConnection() as HttpURLConnection }.getOrNull()
@@ -37,7 +32,8 @@ class PollUpdate(ver: String) {
 
     // Return Latest instance
     private fun getLatest(responseString: String): Latest =
-        runCatching { objectMapper.readValue(responseString, Latest::class.java) }.getOrDefault(Latest("", ""))
+        runCatching { val o = JsonNode.jsonNode(responseString).asObject()
+            Latest(o.get("html_url").asString(),o.get("tag_name").asString())}.getOrDefault(Latest("", nowVer))
 
     // return UpdateInfo instance
     private fun shouldUpdate(latest: Latest): UpdateInfo =

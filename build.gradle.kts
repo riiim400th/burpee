@@ -7,15 +7,13 @@ plugins {
 }
 
 group = "org.example"
-version = "1.2.5"
+version = "1.2.6"
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.14.1")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.14.1")
     implementation("org.apache.poi:poi-ooxml:5.3.0")
     implementation("net.portswigger.burp.extensions:montoya-api:2024.7")
 }
