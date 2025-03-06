@@ -41,8 +41,9 @@ Burpee is a Burp Suite extension that extracts parameters to Excel and the Clipb
 
    **Requests Summary Sheet**
 
-   ![image](https://github.com/user-attachments/assets/4cdec456-82e4-4797-ba10-cff76b472c1f)
+   ![image](https://github.com/user-attachments/assets/100c20ae-7c7d-452a-a1a6-d3a6c023e321)
 
    **Requests Detail Sheet**
 
-   ![image](https://github.com/user-attachments/assets/c7f41d03-1355-4abe-ac90-1b31f1fef513)
+   ![image](https://github.com/user-attachments/assets/6c073c33-70ad-4003-9b5a-483ea96ac048)
+
