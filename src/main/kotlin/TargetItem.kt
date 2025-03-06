@@ -43,10 +43,10 @@ class TargetItem(val requestID: Int, requestResponse: HttpRequestResponse) {
             "Outline" to { outline() },
             "Path" to { paths() },
             "Params" to {
-                param(urlParams, state) + param(bodyParams, state)
+                param(urlParams) + param(bodyParams)
             },
             "Headers" to { header(state) },
-            "Cookies" to { param(cookies, state) }
+            "Cookies" to { param(cookies) }
         ).flatMap { (scope, function) ->
             if (state.parseScope[scope] == true) {
                 function()
