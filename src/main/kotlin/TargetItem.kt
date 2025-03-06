@@ -86,7 +86,7 @@ class TargetItem(val requestID: Int, requestResponse: HttpRequestResponse) {
     private fun decodeIfNeeded(str: String, state: State): String {
         return when {
             "URL" in state.valueDecode -> try {
-                urlUtil.decode(str)
+                urlUtil.decode(str.replace(Regex("%(?![0-9A-Fa-f]{2})|\u0000"), ""))
             } catch (e: IllegalArgumentException) {
                 Api.log("\r\nCaught IllegalArgumentException in function decodeIfNeeded\r\n")
                 return str

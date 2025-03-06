@@ -15,7 +15,7 @@ repositories {
 
 dependencies {
     implementation("org.apache.poi:poi-ooxml:5.3.0")
-    implementation("net.portswigger.burp.extensions:montoya-api:2024.7")
+    implementation("net.portswigger.burp.extensions:montoya-api:2025.2")
 }
 
 tasks.test {
