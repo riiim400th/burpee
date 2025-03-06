@@ -1,43 +1,39 @@
 # Burpee - Burp Suite Extension
 
-## Overview
-Burpee is a Burp Suite extension that extracts parameters to Excel and the Clipboard.
+## 👀Overview
+ **Burpee** is a Burp Suite extension that organizes HTTP requests and exports them to Excel. 
 
 ![head_image](https://github.com/user-attachments/assets/82dbe607-3847-4d04-b720-6867a33e10f8)
 
+**Introduction movie**
+
 [![image](https://github.com/user-attachments/assets/77d1bf6a-dbca-4dae-a955-72b9a85e641d)](https://youtu.be/no15BP_kVHA)
 
+## ✅Features
+- **Copy as TSV Format:** Formats HTTP data in TSV to clipboard, ideal for pasting into Excel. 
+- **Write to Excel:** Automatically generates sheets for request URLs and parameters. 
 
-## Features
-- **Copy as TSV Format:** Formats HTTP data in TSV, ideal for pasting into Excel.
-- **Write to Excel:** Automatically generates sheets for request URLs and parameters.
-
-## Installation
-1. **Download Jar:** Get the latest version from the [release page](https://github.com/riiim400th/burpee/releases).
+## ⬇️Installation
+1. **Download Jar:** Get the latest version from the [release page](https://github.com/riiim400th/burpee/releases). 
 2. **Install in Burp Suite:**
    - Go to the "Extender" tab, then "Extensions".
-   - Click "Add" and select the downloaded jar.
+   - Click "Add" and select the downloaded jar. 🔧
 
-## Usage
-1. **Settings:** In the Burpee tab, configure outputs, scope (which part of the HTTP request to extract), ignore headers, etc.
+## Usage (Excel output)
+1. ⚙️**Settings:** Select the Excel file in the settings tab. 
 
-   ![image](https://github.com/user-attachments/assets/669295e3-0706-492d-be52-48dcbf1cd09b)
+   ![image](https://github.com/user-attachments/assets/c333673c-69cb-4de8-bd64-6b737cd11ce6)
 
+2. 📤**Select and Output:**
+   1. Select requests and open the menu. 
+   2. Click "Extensions > Burpee".
+   3. The analysis is performed and output to Excel file. 
 
-2. **Parse and Copy:**
-   - Select an HTTP request and open the menu.
-   - Click "Extensions > Burpee".
-   - The data is now in the clipboard and saved to a file.
-  
-   ![image](https://github.com/user-attachments/assets/047ec80c-9fc6-4114-a720-fd738af409d4)
+   ![image](https://github.com/user-attachments/assets/c646da1f-ec44-47b5-b176-c20bdf925b9a)
 
-
-3. **Paste into Excel:** Paste the copied data.
-
-   ![image](https://github.com/user-attachments/assets/ab6e9f0e-0033-4954-a9ce-0a591a7af003)
-
-
-4. **Check the file:** The file contains a summary of site visits, with lists of URLs and request details.
+4. 🗂️**Open the file:** Individual sheets for each HTTP request and a summary sheet are created. 
+   
+     These values are decoded, making them easier to read without having to use Burp's decoder !
 
    **Requests Summary Sheet**
 
@@ -46,4 +42,3 @@ Burpee is a Burp Suite extension that extracts parameters to Excel and the Clipb
    **Requests Detail Sheet**
 
    ![image](https://github.com/user-attachments/assets/6c073c33-70ad-4003-9b5a-483ea96ac048)
-
