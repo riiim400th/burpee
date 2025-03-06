@@ -42,3 +42,11 @@
    **Requests Detail Sheet**
 
    ![image](https://github.com/user-attachments/assets/6c073c33-70ad-4003-9b5a-483ea96ac048)
+   
+5. 🔗**Advanced Setting**: Here are the additional settings you can configure:
+   
+   ![image](https://github.com/user-attachments/assets/c34b995d-70ae-4b60-afb2-63b896a855ef)
+
+   - Headers to exclude from output
+   - Whether to output Burp log highlights
+   - Save/Load settings
