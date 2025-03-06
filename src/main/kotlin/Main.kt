@@ -3,7 +3,7 @@ package burpee
 import burp.api.montoya.BurpExtension
 import burp.api.montoya.MontoyaApi
 
-const val ver = "v1.2.6"
+const val ver = "v1.2.7"
 
 val stateHolder = StateHolder()
 

@@ -18,7 +18,6 @@ class TabTask : JPanel() {
         mapOf(
             0 to "clip board",
             1 to "Excel file",
-            2 to "clip board & Excel file"
         ).values.toTypedArray()
     ).apply {
         addActionListener {
@@ -179,7 +178,7 @@ class TabTask : JPanel() {
         addComponentToGrid(JLabel("Ignore Header"), 3, 0, gridwidth = 3)
         addComponentToGrid(JScrollPane(JList(listModel).apply {
             visibleRowCount = 10
-            fixedCellWidth = 240
+            preferredSize = Dimension(300, 200) // 初期サイズは必要ならセット
         }), 3, 1, gridwidth = 3, gridheight = 10)
 
         addComponentToGrid(JButton("Add Paste").apply {

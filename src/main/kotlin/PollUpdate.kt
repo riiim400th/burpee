@@ -16,7 +16,7 @@ data class UpdateInfo(
 
 class PollUpdate(ver: String) {
     private val nowVer = ver
-    private val url = DefaultData.reposApiUrl
+    private val url = DefaultData.REPO_ENDPOINT
 
     private fun createConnection(url: String): HttpURLConnection? =
         runCatching { URI(url).toURL().openConnection() as HttpURLConnection }.getOrNull()
@@ -27,13 +27,14 @@ class PollUpdate(ver: String) {
             runCatching {
                 it.requestMethod = "GET"
                 it.inputStream.bufferedReader().use { reader -> reader.readText() }
-            }.getOrDefault("")
+            }.getOrDefault("{}")
         } ?: ""
 
     // Return Latest instance
-    private fun getLatest(responseString: String): Latest =
-        runCatching { val o = JsonNode.jsonNode(responseString).asObject()
-            Latest(o.get("html_url").asString(),o.get("tag_name").asString())}.getOrDefault(Latest("", nowVer))
+    private fun getLatest(responseString: String): Latest = runCatching {
+            val o = JsonNode.jsonNode(responseString).asObject()
+            Latest(o.get("html_url").asString(), o.get("tag_name").asString())
+        }.getOrDefault(Latest("", nowVer))
 
     // return UpdateInfo instance
     private fun shouldUpdate(latest: Latest): UpdateInfo =

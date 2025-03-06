@@ -22,7 +22,6 @@ object Validation {
         return when (state.mode) {
             0 -> true
             1 -> state.outputFile != ""
-            2 -> state.outputFile != ""
             else -> false
         }
     }

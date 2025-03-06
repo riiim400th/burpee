@@ -3,15 +3,17 @@ package burpee
 object DefaultData {
     val requestSheetColumn = listOf(
         "No.",
-        "Action",
-        "Referer URL",
-        "Dst URL",
-        "Dst URL(with parameters)",
+        "Host",
         "Method",
-        "MimeType",
-        "Status Code",
+        "Path",
+        "Query",
+        "URL",
         "Parameter count",
-        "Note"
+        "Status Code",
+        "MimeType",
+        "Extension",
+        "Referer",
+        "Notes"
     )
     val defaultState = State(
         mode = 0,
@@ -27,12 +29,21 @@ object DefaultData {
             "Sec-Fetch-Dest",
             "Sec-Fetch-Mode",
             "Sec-Fetch-Site",
+            "Sec-Fetch-User",
             "Priority",
             "Pragma",
             "Cache-Control",
             "Content-Length",
             "Te",
-            "Connection"
+            "Connection",
+            "DNT",
+            "Sec-Ch-Ua",
+            "Sec-Ch-Ua-Platform",
+            "If-Modified-Since",
+            "If-None-Match",
+            "Alt-Svc",
+            "Timing-Allow-Origin",
+            "Accept-Charset",
         ),
         highlightRows = false,
         parseScope = mapOf(
@@ -44,5 +55,5 @@ object DefaultData {
         ),
         valueDecode = listOf("URL")
     )
-    val reposApiUrl = "https://api.github.com/repos/riiim400th/burpee/releases/latest"
+    const val REPO_ENDPOINT = "https://api.github.com/repos/riiim400th/burpee/releases/latest"
 }

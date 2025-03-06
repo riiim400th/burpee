@@ -9,7 +9,7 @@ import javax.swing.*
 
 class MenuTask : ContextMenuItemsProvider {
     override fun provideMenuItems(event: ContextMenuEvent): List<Component>? {
-        if (event.isFromTool(ToolType.PROXY, ToolType.REPEATER, ToolType.TARGET, ToolType.LOGGER)) {
+        if (event.isFromTool(ToolType.PROXY, ToolType.REPEATER, ToolType.TARGET, ToolType.LOGGER, ToolType.ORGANIZER)) {
             val menuItemList: MutableList<Component> = mutableListOf()
             val burpeeRun = JMenuItem("burpee")
             val requestResponses: List<HttpRequestResponse> = when (event.messageEditorRequestResponse().isPresent) {
@@ -17,14 +17,9 @@ class MenuTask : ContextMenuItemsProvider {
                 else -> event.selectedRequestResponses().reversed()
             }
             burpeeRun.addActionListener {
-                val outPutTask = OutPutTask(requestResponses)
                 when (stateHolder.state.mode) {
-                    0 -> outPutTask.outToClipBoard()
-                    1 -> outPutTask.outToExcel()
-                    2 -> {
-                        outPutTask.outToClipBoard()
-                        outPutTask.outToExcel()
-                    }
+                    0 -> OutClipBoard(requestResponses).outToClipBoard()
+                    1 -> OutPutTask(requestResponses).outToExcel()
                 }
             }
             menuItemList.add(burpeeRun)

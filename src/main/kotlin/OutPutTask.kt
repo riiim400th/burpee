@@ -1,29 +1,14 @@
 package burpee
 
 import burp.api.montoya.http.message.HttpRequestResponse
-import java.awt.Toolkit
-import java.awt.datatransfer.StringSelection
 import javax.swing.JOptionPane
 
 class OutPutTask(requestResponses: List<HttpRequestResponse>) {
     private val state = stateHolder.state
     val api = Api.api
-    private val excelTask =
-        ExcelTask(state).apply { if (getRequestID() == 0) insertRequestsSheetColumn().saveWorkbook() }
+    private val excelTask = ExcelTask(state).apply { if (getRequestID() == 0) insertRequestsSheetColumn().saveWorkbook() }
     private val firstRequestId = excelTask.getRequestID()
     private val targetItems = requestResponses.mapIndexed() { i, it -> TargetItem(firstRequestId + i, it) }
-
-    fun outToClipBoard() {
-        targetItems.forEach { targetItem ->
-            val text = targetItem.detail(state).joinToString(separator = "\r\n") { row ->
-                row.joinToString(separator = "\t")
-            }
-            val selection = StringSelection(text)
-            val clipboard = Toolkit.getDefaultToolkit().systemClipboard
-            clipboard.setContents(selection, selection)
-            Api.log("\r\ncopied:\t${text}")
-        }
-    }
 
     fun outToExcel() {
         runCatching {

@@ -5,6 +5,8 @@ import burp.api.montoya.http.message.HttpRequestResponse
 import burp.api.montoya.http.message.params.HttpParameterType
 import burp.api.montoya.http.message.params.ParsedHttpParameter
 import burp.api.montoya.http.message.requests.HttpRequest
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
 
 class TargetItem(val requestID: Int, requestResponse: HttpRequestResponse) {
     private val api = Api.api
@@ -59,22 +61,23 @@ class TargetItem(val requestID: Int, requestResponse: HttpRequestResponse) {
 
     fun summary(): List<List<String>> {
         val referer = req.headers().find { it.name() == "Referer" }?.value() ?: " "
-        val urlWithoutQuery = req.url().substringBefore("?")
         val paramCount = req.parameters().count { it.type() != HttpParameterType.COOKIE }.toString()
         val outputNote = annotation.notes().replace("\t", "    ")
-        val action = outputNote.split("\n")[0]
+
 
         return listOf(
             listOf(
                 requestID.toString(),
-                action,
-                referer,
-                urlWithoutQuery,
-                req.url(),
+                req.httpService().host(),
                 req.method(),
-                mimeType,
-                statusCode,
+                req.pathWithoutQuery(),
+                req.query(),
+                req.url(),
                 paramCount,
+                statusCode,
+                mimeType,
+                req.fileExtension(),
+                referer,
                 outputNote
             )
         )
@@ -85,16 +88,22 @@ class TargetItem(val requestID: Int, requestResponse: HttpRequestResponse) {
             "URL" in state.valueDecode -> try {
                 urlUtil.decode(str)
             } catch (e: IllegalArgumentException) {
+                Api.log("\r\nCaught IllegalArgumentException in function decodeIfNeeded\r\n")
                 return str
             }
-
             else -> str
         }
     }
 
     private fun toStringBytes(byteString: String): String {
-        Api.log("MULTIPART_ATTRIBUTE!!!!")
-        return byteUtil.convertToString(byteUtil.convertFromString(byteString))
+        val result:String
+        try {
+            result = byteUtil.convertToString(byteUtil.convertFromString(byteString))
+        } catch (e:IllegalArgumentException) {
+            Api.log("\r\nCaught IllegalArgumentException in function toStringBytes\r\n")
+            return ""
+        }
+        return result
     }
 
     private fun outline(state: State): List<List<String>> {
