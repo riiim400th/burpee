@@ -5,12 +5,11 @@ import burp.api.montoya.http.message.HttpRequestResponse
 import burp.api.montoya.http.message.params.HttpParameterType
 import burp.api.montoya.http.message.params.ParsedHttpParameter
 import burp.api.montoya.http.message.requests.HttpRequest
-import java.net.URLDecoder
-import java.nio.charset.StandardCharsets
+
 
 class TargetItem(val requestID: Int, requestResponse: HttpRequestResponse) {
     private val api = Api.api
-    private val urlUtil = api.utilities().urlUtils()
+//    private val urlUtil = api.utilities().urlUtils()
     private val byteUtil = api.utilities().byteUtils()
     private val mimeType = requestResponse.response()?.mimeType()?.name?.takeIf { it != "UNRECOGNIZED" } ?: ""
     private val req: HttpRequest = requestResponse.request()
@@ -83,60 +82,42 @@ class TargetItem(val requestID: Int, requestResponse: HttpRequestResponse) {
         )
     }
 
-    private fun decodeIfNeeded(str: String, state: State): String {
-        return when {
-            "URL" in state.valueDecode -> try {
-                urlUtil.decode(str.replace(Regex("%(?![0-9A-Fa-f]{2})|\u0000"), ""))
-            } catch (e: IllegalArgumentException) {
-                Api.log("\r\nCaught IllegalArgumentException in function decodeIfNeeded\r\n")
-                return str
-            }
-            else -> str
-        }
-    }
-
-    private fun toStringBytes(byteString: String): String {
-        val result:String
-        try {
-            result = byteUtil.convertToString(byteUtil.convertFromString(byteString))
-        } catch (e:IllegalArgumentException) {
-            Api.log("\r\nCaught IllegalArgumentException in function toStringBytes\r\n")
-            return ""
-        }
-        return result
+    private fun String.diff(value:String):String {
+        return if(value == this) "" else this
     }
 
     private fun outline(state: State): List<List<String>> {
-        val outputUrl = decodeIfNeeded(req.url(), state)
 
         return listOf(
             listOf("Method", req.method()),
-            listOf("Url", outputUrl),
+            listOf("Url", req.url()),
             listOf("Version", req.httpVersion()),
             listOf(),
-            listOf("TYPE", "NAME", "VALUE")
+            listOf("TYPE", "NAME", "VALUE", "VALUE(auto decoded)")
         )
     }
 
     private fun paths(state: State): List<List<String>> {
-        return paths.map { listOf("PATH", "-", decodeIfNeeded(it, state)) }
+        return paths.map { listOf("PATH", "-", it, Decode.autoDecode(it).diff(it)) }
     }
 
     private fun header(state: State): List<List<String>> {
         return headers
-            .filter { it.name() !in state.ignoreHeaderNames }
+            .filter { it.name().lowercase() !in state.ignoreHeaderNames.map { it.lowercase() } }
             .map {
-                listOf("Header", decodeIfNeeded(it.name(), state), decodeIfNeeded(it.value(), state))
+                listOf("Header", Decode.autoDecode(it.name()), it.value(), Decode.autoDecode(it.value()).diff(it.value()))
             }
     }
 
     private fun param(params: List<ParsedHttpParameter>, state: State): List<List<String>> {
         return params.map {
-            val outputValue = when {
-                it.type() == HttpParameterType.MULTIPART_ATTRIBUTE -> toStringBytes(it.value())
-                else -> it.value()
+            val value = if (Escape.isUrlUnsafe(it.value())) Escape.removeNonPrintableChars(it.value()) else it.value()
+            if (it.type() == HttpParameterType.MULTIPART_ATTRIBUTE) {
+                listOf(it.type().toString(), it.name(), value,"")
+            } else {
+                listOf(it.type().toString(), Decode.decodeUrlEncoded(it.name()), value,Decode.autoDecode(value).diff(value))
             }
-            listOf(it.type().toString(), decodeIfNeeded(it.name(), state), decodeIfNeeded(outputValue, state))
+
         }
     }
 

@@ -43,15 +43,15 @@ class TabTask : JPanel() {
     private val headerCheckBox = getCheckBox("Headers")
     private val paramsCheckBox = getCheckBox("Params")
     private val cookiesCheckBox = getCheckBox("Cookies")
-    private val urlDecCheckBox = JCheckBox("URL Decode", stateHolder.state.valueDecode.contains("URL"))
-        .apply {
-            addActionListener {
-                stateHolder.state =
-                    stateHolder.state.copy(valueDecode = stateHolder.state.valueDecode.toMutableList().apply {
-                        if (isSelected) add("URL") else remove("URL")
-                    })
-            }
-        }
+//    private val urlDecCheckBox = JCheckBox("URL Decode", stateHolder.state.valueDecode.contains("URL"))
+//        .apply {
+//            addActionListener {
+//                stateHolder.state =
+//                    stateHolder.state.copy(valueDecode = stateHolder.state.valueDecode.toMutableList().apply {
+//                        if (isSelected) add("URL") else remove("URL")
+//                    })
+//            }
+//        }
     private val highlightCheckBox = JCheckBox("Reflect color", stateHolder.state.highlightRows).apply {
         toolTipText = "Reflect the highlight color of the Proxy tab onto the rows of the Request sheet."
         addActionListener {
@@ -77,7 +77,7 @@ class TabTask : JPanel() {
         headerCheckBox.isSelected = state.parseScope["Headers"]!!
         paramsCheckBox.isSelected = state.parseScope["Params"]!!
         cookiesCheckBox.isSelected = state.parseScope["Cookies"]!!
-        urlDecCheckBox.isSelected = state.valueDecode.contains("URL")
+//        urlDecCheckBox.isSelected = state.valueDecode.contains("URL")
         highlightCheckBox.isSelected = state.highlightRows
         Api.log("State is $state")
     }
@@ -100,7 +100,7 @@ class TabTask : JPanel() {
         addIgnoreHeaderSection()
 
         addScopeSection()
-        addDecodeSection()
+        // addDecodeSection()
         addHighlightSection()
         addUpdateSection()
         addSettingButton()
@@ -139,14 +139,14 @@ class TabTask : JPanel() {
             fill = 1,
             insets = Insets(15, 20, 20, 15)
         )
-        addComponentToGrid(
-            JSeparator(SwingConstants.HORIZONTAL),
-            7,
-            5,
-            gridwidth = 1,
-            fill = 1,
-            insets = Insets(15, 20, 20, 15)
-        )
+//        addComponentToGrid(
+//            JSeparator(SwingConstants.HORIZONTAL),
+//            7,
+//            5,
+//            gridwidth = 1,
+//            fill = 1,
+//            insets = Insets(15, 20, 20, 15)
+//        )
     }
 
     private fun addOutputSection() {
@@ -205,14 +205,14 @@ class TabTask : JPanel() {
         addComponentToGrid(paramsCheckBox, 6, 5, 1, 1, GridBagConstraints.NORTHWEST)
     }
 
-    private fun addDecodeSection() {
-        addComponentToGrid(JLabel("Value Decoded"), 7, 0)
-        addComponentToGrid(urlDecCheckBox, 7, 1)
-    }
+//    private fun addDecodeSection() {
+//        addComponentToGrid(JLabel("Value Decoded"), 7, 0)
+//        addComponentToGrid(urlDecCheckBox, 7, 1)
+//    }
 
     private fun addHighlightSection() {
-        addComponentToGrid(JLabel("Request Highlight"), 7, 3)
-        addComponentToGrid(highlightCheckBox, 7, 4)
+        addComponentToGrid(JLabel("Request Highlight"), 7, 0)
+        addComponentToGrid(highlightCheckBox, 7, 1)
     }
 
     private fun addSettingButton() {
@@ -231,7 +231,7 @@ class TabTask : JPanel() {
     private fun addUpdateSection() {
         val updateInfo = PollUpdate(ver).poll()
         if (updateInfo.updatable) {
-            addComponentToGrid(JLabel("Latest Version"), 7, 7)
+            addComponentToGrid(JLabel("Latest Version"), 7, 3)
             addComponentToGrid(JButton("Update to ${updateInfo.latest.tagName}").apply {
                 toolTipText = "Latest version ${updateInfo.latest.tagName} has been released. \nPlease download it from here."
                 addActionListener {
@@ -241,7 +241,7 @@ class TabTask : JPanel() {
                         e.printStackTrace()
                     }
                 }
-            }, 7, 8)
+            }, 7, 4)
         }
     }
 
