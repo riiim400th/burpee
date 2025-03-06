@@ -9,8 +9,6 @@ import burp.api.montoya.http.message.requests.HttpRequest
 
 class TargetItem(val requestID: Int, requestResponse: HttpRequestResponse) {
     private val api = Api.api
-//    private val urlUtil = api.utilities().urlUtils()
-    private val byteUtil = api.utilities().byteUtils()
     private val mimeType = requestResponse.response()?.mimeType()?.name?.takeIf { it != "UNRECOGNIZED" } ?: ""
     private val req: HttpRequest = requestResponse.request()
     private val statusCode = requestResponse.response()?.statusCode()?.toString() ?: ""
@@ -42,8 +40,8 @@ class TargetItem(val requestID: Int, requestResponse: HttpRequestResponse) {
 
     fun detail(state: State): List<List<String>> {
         return mapOf(
-            "Outline" to { outline(state) },
-            "Path" to { paths(state) },
+            "Outline" to { outline() },
+            "Path" to { paths() },
             "Params" to {
                 param(urlParams, state) + param(bodyParams, state)
             },
@@ -86,7 +84,7 @@ class TargetItem(val requestID: Int, requestResponse: HttpRequestResponse) {
         return if(value == this) "" else this
     }
 
-    private fun outline(state: State): List<List<String>> {
+    private fun outline(): List<List<String>> {
 
         return listOf(
             listOf("Method", req.method()),
@@ -97,7 +95,7 @@ class TargetItem(val requestID: Int, requestResponse: HttpRequestResponse) {
         )
     }
 
-    private fun paths(state: State): List<List<String>> {
+    private fun paths(): List<List<String>> {
         return paths.map { listOf("PATH", "-", it, Decode.autoDecode(it).diff(it)) }
     }
 
@@ -109,7 +107,7 @@ class TargetItem(val requestID: Int, requestResponse: HttpRequestResponse) {
             }
     }
 
-    private fun param(params: List<ParsedHttpParameter>, state: State): List<List<String>> {
+    private fun param(params: List<ParsedHttpParameter>): List<List<String>> {
         return params.map {
             val value = if (Escape.isUrlUnsafe(it.value())) Escape.removeNonPrintableChars(it.value()) else it.value()
             if (it.type() == HttpParameterType.MULTIPART_ATTRIBUTE) {
