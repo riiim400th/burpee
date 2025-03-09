@@ -28,10 +28,11 @@ class OutPutTask(requestResponses: List<HttpRequestResponse>) {
         }.onFailure { e ->
             JOptionPane.showMessageDialog(
                 null,
-                "File not found. Did you delete it or leave it open?",
+                "Did you delete it or leave it open?",
                 "burpee",
                 JOptionPane.INFORMATION_MESSAGE
             )
+            throw e
 
         }
     }

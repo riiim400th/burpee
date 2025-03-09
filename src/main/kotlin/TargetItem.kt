@@ -8,7 +8,6 @@ import burp.api.montoya.http.message.requests.HttpRequest
 
 
 class TargetItem(val requestID: Int, requestResponse: HttpRequestResponse) {
-    private val api = Api.api
     private val mimeType = requestResponse.response()?.mimeType()?.name?.takeIf { it != "UNRECOGNIZED" } ?: ""
     private val req: HttpRequest = requestResponse.request()
     private val statusCode = requestResponse.response()?.statusCode()?.toString() ?: ""
@@ -59,7 +58,7 @@ class TargetItem(val requestID: Int, requestResponse: HttpRequestResponse) {
     fun summary(): List<List<String>> {
         val referer = req.headers().find { it.name() == "Referer" }?.value() ?: " "
         val paramCount = req.parameters().count { it.type() != HttpParameterType.COOKIE }.toString()
-        val outputNote = annotation.notes().replace("\t", "    ")
+        val outputNote = annotation.notes()?.replace("\t", "    ") ?: ""
 
 
         return listOf(

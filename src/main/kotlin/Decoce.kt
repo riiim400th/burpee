@@ -114,12 +114,12 @@ object Decode {
      * デコードに失敗した場合は元の値が返されます。
      */
     fun autoDecode(input: String): String {
-        val afterJWT = decodeIfJWT(input)
-        val afterUrl = decodeUrlEncoded(afterJWT)
-        val afterTimeStamp = convertTimestamp(afterUrl)
-        val afterBase64 = decodeBase64(afterTimeStamp)
-
-        return afterBase64
+        return input
+            .let { decodeUrlEncoded(it) }
+            .let { decodeUrlEncoded(it) }
+            .let { decodeIfJWT(it) }
+            .let { convertTimestamp(it) }
+            .let { decodeBase64(it) }
     }
 
     /**
